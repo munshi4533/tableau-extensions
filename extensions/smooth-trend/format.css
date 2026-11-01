@@ -46,3 +46,5 @@ select option:disabled { color: #b5b4ae; }
 .fx-btn { font: inherit; padding: 6px 16px; border-radius: 6px; cursor: pointer; }
 .fx-btn.primary { background: var(--accent); border: 1px solid var(--accent); color: white; font-weight: 600; }
 .fx-btn.ghost { background: white; border: 1px solid var(--field); color: var(--ink-2); }
+.fx-color[hidden] { display: none; }
+.fx-color { align-self: end; }

@@ -32,6 +32,8 @@
     showPoints: false,
     showMinMax: true,
     showGrid: false, // horizontal gridlines behind the line
+    background: 'transparent', // transparent | white | custom
+    bgColor: '#ffffff',
     yZero: true,
     animate: true,
     tooltipMode: 'custom'
@@ -418,6 +420,7 @@
   // ---------------------------------------------------------------- render
   function render () {
     hideTooltip();
+    applyBackground();
     const chartEl = $('chart');
     chartEl.innerHTML = '';
     if (!model) return;
@@ -438,6 +441,14 @@
     renderHeader(tiny);
     renderLegend(tiny);
     drawChart(chartEl);
+  }
+
+  // Transparent lets the Tableau worksheet/dashboard color show through
+  function applyBackground () {
+    const bg = cfg.background === 'white' ? '#ffffff' : cfg.background === 'custom' ? (cfg.bgColor || '#ffffff') : 'transparent';
+    const root = document.documentElement.style;
+    root.setProperty('--surface', bg);
+    root.setProperty('--halo', bg);
   }
 
   function renderHeader (tiny) {
@@ -729,7 +740,7 @@
         plot.append('g').selectAll('circle').data(pts).join('circle')
           .attr('cx', px).attr('cy', (p) => y(p.y)).attr('r', Math.max(2.5, lw))
           .attr('fill', (p, i) => (growth && i > 0 ? toneColor(change(p.y, pts[i - 1].y).tone) : neutral))
-          .attr('stroke', 'var(--surface)').attr('stroke-width', 1.5);
+          .attr('stroke', 'var(--halo)').attr('stroke-width', 1.5);
       }
 
       if (cfg.showMinMax && pts.length > 2) drawMinMax(plot, pts, px, y, iw);
@@ -738,7 +749,7 @@
       const lp = pts[pts.length - 1];
       const lastColor = growth ? toneColor(change(lp.y, pts[pts.length - 2].y).tone) : neutral;
       plot.append('circle').attr('cx', px(lp)).attr('cy', y(lp.y)).attr('r', lw + 2.5)
-        .attr('fill', lastColor).attr('stroke', 'var(--surface)').attr('stroke-width', 2);
+        .attr('fill', lastColor).attr('stroke', 'var(--halo)').attr('stroke-width', 2);
     } else {
       series.forEach((s) => {
         plot.append('path').attr('class', 'st-line').attr('d', lineGen(s.points))
@@ -747,10 +758,10 @@
         if (cfg.showPoints) {
           plot.append('g').selectAll('circle').data(s.points).join('circle')
             .attr('cx', px).attr('cy', (p) => y(p.y)).attr('r', Math.max(2.5, lw))
-            .attr('fill', s.color).attr('stroke', 'var(--surface)').attr('stroke-width', 1.5);
+            .attr('fill', s.color).attr('stroke', 'var(--halo)').attr('stroke-width', 1.5);
         }
         const lp = s.points[s.points.length - 1];
-        if (lp) plot.append('circle').attr('cx', px(lp)).attr('cy', y(lp.y)).attr('r', lw + 1.5).attr('fill', s.color).attr('stroke', 'var(--surface)').attr('stroke-width', 2);
+        if (lp) plot.append('circle').attr('cx', px(lp)).attr('cy', y(lp.y)).attr('r', lw + 1.5).attr('fill', s.color).attr('stroke', 'var(--halo)').attr('stroke-width', 2);
       });
       if (endLabels) drawEndLabels(plot, series, px, y);
     }

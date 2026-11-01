@@ -1,6 +1,7 @@
 /* Smooth Trend – Tableau Viz Extension */
 :root {
-  --surface: #ffffff;
+  --surface: transparent; /* set from Format → Background */
+  --halo: transparent;   /* outline behind labels and dots; matches the background */
   --ink-1: #0b0b0b;
   --ink-2: #52514e;
   --ink-3: #898781;
@@ -76,9 +77,9 @@ html, body {
 .st-chart .domain { stroke: var(--axis); }
 .st-chart .st-line { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .st-chart .st-crosshair { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 3; pointer-events: none; }
-.st-chart .st-hover-dot { stroke: var(--surface); stroke-width: 2; pointer-events: none; }
-.st-chart .st-annot { font-size: 10px; fill: var(--ink-2); font-weight: 600; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
-.st-chart .st-endlabel { font-size: 10px; fill: var(--ink-2); paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
+.st-chart .st-hover-dot { stroke: var(--halo); stroke-width: 2; pointer-events: none; }
+.st-chart .st-annot { font-size: 10px; fill: var(--ink-2); font-weight: 600; paint-order: stroke; stroke: var(--halo); stroke-width: 3px; }
+.st-chart .st-endlabel { font-size: 10px; fill: var(--ink-2); paint-order: stroke; stroke: var(--halo); stroke-width: 3px; }
 .st-chart .st-overlay { fill: transparent; cursor: crosshair; }
 
 .st-empty {

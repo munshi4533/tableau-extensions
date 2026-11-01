@@ -36,12 +36,13 @@ Smooth line trend with a KPI header, growth/degrowth coloring and smart tooltips
 
 **3. Header**: show/hide, title, icon, subtitle (date range, or "Data as of" the max date).
 **4. Growth & degrowth**: *Higher is better* (untick for cost/churn), color the line by growth, good/bad colors.
-**5. Line**: curve, width, color, area, high/low labels, all points, gridlines (off by default), Y from zero, animation.
+**5. Line**: curve, width, color, area, high/low labels, all points, gridlines (off by default), background (transparent by default, white or a custom color), Y from zero, animation.
 **6. Tooltip**: Smart (value + ▲/▼ vs previous), Tableau's own, or off.
 
 Click a point to select it in Tableau (drives dashboard actions). Ctrl/Cmd-click adds to the selection.
 
 ## Version history
+- **1.3.0**: transparent background by default (Tableau's sheet/dashboard color shows through); Background option: Transparent / White / Custom color.
 - **1.2.1**: gridlines removed by default; new *Gridlines* option in Format → Line.
 - **1.2.0+repo**: moved to extensions/smooth-trend in the multi-extension repo (no functional change).
 - **1.2.0**: Dates section: date level roll-up (day/week/month/quarter/year), date label formats; monthly data now labelled "Jan 2025" instead of full dates; axis ticks only on real periods.

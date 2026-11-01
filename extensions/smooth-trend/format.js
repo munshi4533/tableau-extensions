@@ -96,6 +96,8 @@
 
     $('aggField').hidden = !['mtd', 'qtd', 'ytd'].includes(v) && cfg.dateLevel === 'auto';
 
+    $('bgColorField').hidden = cfg.background !== 'custom';
+
     // Dates
     const lv = field('dateLevel');
     lv.disabled = !isTime();
