@@ -31,6 +31,7 @@
     showArea: true,
     showPoints: false,
     showMinMax: true,
+    showGrid: false, // horizontal gridlines behind the line
     yZero: true,
     animate: true,
     tooltipMode: 'custom'
@@ -661,7 +662,7 @@
 
     // Grid + axes
     g.append('g').attr('class', 'st-yaxis')
-      .call(d3.axisLeft(y).ticks(yTicksN).tickSize(-iw).tickPadding(8).tickFormat((v) => fmtNum(v, null, true)))
+      .call(d3.axisLeft(y).ticks(yTicksN).tickSize(cfg.showGrid ? -iw : 0).tickPadding(cfg.showGrid ? 8 : 6).tickFormat((v) => fmtNum(v, null, true)))
       .call((a) => a.select('.domain').remove());
 
     const xAxis = d3.axisBottom(x).tickSizeOuter(0).tickSize(4).tickPadding(6);
