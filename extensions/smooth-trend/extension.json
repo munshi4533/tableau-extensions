@@ -1,0 +1,36 @@
+{
+  "name": "Smooth Trend",
+  "manifestName": "SmoothTrend",
+  "version": "1.2.0",
+  "description": "Smooth line trend with a KPI header (latest, MTD, QTD, YTD or your own calculation), growth/degrowth coloring and smart tooltips.",
+  "entry": "index.html",
+  "icon": "icon.png",
+  "formatDialog": true,
+  "previewPages": ["index.html", "format.html"],
+  "encodings": [
+    {
+      "id": "date", "name": "Date",
+      "roles": ["continuous-dimension", "discrete-dimension"],
+      "maxCount": 1, "icon": "letter-x",
+      "tooltip": "A date or period. Continuous MONTH(Date) works best; discrete periods like Q1 2025 also work. MTD/QTD/YTD need a real date."
+    },
+    {
+      "id": "value", "name": "Value",
+      "dataType": "numeric", "roles": ["continuous-measure"],
+      "maxCount": 1, "icon": "letter-y",
+      "tooltip": "The measure to trend, e.g. SUM(Sales)."
+    },
+    {
+      "id": "series", "name": "Series",
+      "roles": ["discrete-dimension"],
+      "maxCount": 1, "icon": "color",
+      "tooltip": "Optional. A dimension that splits the trend into several lines (up to 8; the rest are grouped as Other)."
+    },
+    {
+      "id": "kpi", "name": "KPI",
+      "dataType": "numeric", "roles": ["continuous-measure"],
+      "maxCount": 2, "icon": "metric",
+      "tooltip": "Optional. Your own calculation for the header number (e.g. MTD Sales). Add a second measure to compare against it (e.g. Last Month Sales). Its value at the latest date is used."
+    }
+  ]
+}

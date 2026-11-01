@@ -1,0 +1,11 @@
+[
+  {
+    "id": "smooth-trend",
+    "name": "Smooth Trend",
+    "version": "1.2.0",
+    "description": "Smooth line trend with a KPI header (latest, MTD, QTD, YTD or your own calculation), growth/degrowth coloring and smart tooltips.",
+    "manifestName": "SmoothTrend",
+    "trex": "manifests/SmoothTrend.trex",
+    "preview": "extensions/smooth-trend/dev/preview.html"
+  }
+]

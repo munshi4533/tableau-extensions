@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base href="../" />
+  <!-- GENERATED preview (tools/build.py): sample data instead of Tableau -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Format Smooth Trend (preview)</title>
+  <link rel="stylesheet" href="./format.css" />
+  <script>window.tableau = window.parent.__mockDialogTableau;</script>
+  <script src="./format.js" defer></script>
+</head>
+<body>
+  <form id="form" class="fx" autocomplete="off">
+    <header class="fx-top">
+      <div>
+        <h1>Format Smooth Trend</h1>
+        <p>Changes preview live on the sheet.</p>
+      </div>
+    </header>
+
+    <main class="fx-body">
+      <!-- 1. Headline number -->
+      <section>
+        <h2><span class="fx-num">1</span>Headline number</h2>
+        <label class="fx-field">Show
+          <select name="kpiValue">
+            <option value="auto">Automatic</option>
+            <option value="latest">Latest period (max date)</option>
+            <option value="previous">Previous period</option>
+            <option value="mtd">Month to date (MTD)</option>
+            <option value="qtd">Quarter to date (QTD)</option>
+            <option value="ytd">Year to date (YTD)</option>
+            <option value="total">Total of all periods</option>
+            <option value="average">Average per period</option>
+            <option value="shelf">My calculation (KPI shelf)</option>
+          </select>
+        </label>
+        <p class="fx-hint" id="hintValue"></p>
+
+        <label class="fx-field">Compare with
+          <select name="kpiCompare">
+            <option value="previous">Previous period</option>
+            <option value="yoy">Same period last year</option>
+            <option value="first">First period in the chart</option>
+            <option value="peak">Highest period (peak)</option>
+            <option value="none">No comparison</option>
+          </select>
+        </label>
+        <p class="fx-hint" id="hintCompare"></p>
+
+        <label class="fx-field" id="aggField">Combine values by
+          <select name="kpiAgg">
+            <option value="auto">Automatic (Sum; Average for % measures)</option>
+            <option value="sum">Sum</option>
+            <option value="avg">Average</option>
+          </select>
+        </label>
+
+        <label class="fx-check"><input type="checkbox" name="shortNumbers" /> Short numbers (1.2M instead of 1,234,567)</label>
+      </section>
+
+      <!-- 2. Dates -->
+      <section>
+        <h2><span class="fx-num">2</span>Dates</h2>
+        <div class="fx-grid">
+          <label class="fx-field">Date level
+            <select name="dateLevel">
+              <option value="auto">Automatic (as in data)</option>
+              <option value="day">Day</option>
+              <option value="week">Week</option>
+              <option value="month">Month</option>
+              <option value="quarter">Quarter</option>
+              <option value="year">Year</option>
+            </select>
+          </label>
+          <label class="fx-field">Date labels
+            <select name="dateFormat">
+              <option value="auto">Automatic</option>
+              <option value="tableau">As formatted in Tableau</option>
+              <option value="mmm-yyyy">Jan 2025</option>
+              <option value="mmmm-yyyy">January 2025</option>
+              <option value="yyyy-mm">2025-01</option>
+              <option value="mm/yyyy">01/2025</option>
+              <option value="dd-mmm-yyyy">15 Jan 2025</option>
+              <option value="quarter">Q1 2025</option>
+              <option value="yyyy">2025</option>
+            </select>
+          </label>
+        </div>
+        <p class="fx-hint" id="hintDates"></p>
+      </section>
+
+      <!-- 3. Header -->
+      <section>
+        <h2><span class="fx-num">3</span>Header</h2>
+        <label class="fx-check"><input type="checkbox" name="showHeader" /> Show header</label>
+        <div class="fx-dep" data-dep="showHeader">
+          <label class="fx-field">Title
+            <input type="text" name="title" placeholder="Automatic (measure name + Trend)" />
+          </label>
+          <div class="fx-grid">
+            <label class="fx-field">Icon
+              <select name="icon">
+                <option value="auto">Up / down arrow</option>
+                <option value="chart">Line chart</option>
+                <option value="money">Money</option>
+                <option value="users">Customers</option>
+                <option value="activity">Activity</option>
+                <option value="none">No icon</option>
+              </select>
+            </label>
+            <label class="fx-field">Subtitle
+              <select name="subtitle">
+                <option value="range">Date range</option>
+                <option value="asof">Data as of (max date)</option>
+                <option value="none">None</option>
+              </select>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. Growth -->
+      <section>
+        <h2><span class="fx-num">4</span>Growth &amp; degrowth</h2>
+        <label class="fx-check"><input type="checkbox" name="higherIsBetter" /> Higher is better</label>
+        <p class="fx-hint">Untick for cost, churn, complaints… so going up shows as bad (red).</p>
+        <label class="fx-check"><input type="checkbox" name="colorByGrowth" /> Color the line by growth <small>(single line)</small></label>
+        <div class="fx-grid">
+          <label class="fx-color">Good <input type="color" name="upColor" /></label>
+          <label class="fx-color">Bad <input type="color" name="downColor" /></label>
+        </div>
+      </section>
+
+      <!-- 5. Line -->
+      <section>
+        <h2><span class="fx-num">5</span>Line</h2>
+        <div class="fx-grid">
+          <label class="fx-field">Curve
+            <select name="curve">
+              <option value="smooth">Smooth</option>
+              <option value="natural">Extra smooth</option>
+              <option value="linear">Straight</option>
+              <option value="step">Step</option>
+            </select>
+          </label>
+          <label class="fx-field">Width
+            <input type="range" name="lineWidth" min="1" max="6" step="0.5" />
+          </label>
+        </div>
+        <label class="fx-color">Line color <input type="color" name="lineColor" /></label>
+        <div class="fx-grid">
+          <label class="fx-check"><input type="checkbox" name="showArea" /> Gradient area</label>
+          <label class="fx-check"><input type="checkbox" name="showMinMax" /> High &amp; low labels</label>
+          <label class="fx-check"><input type="checkbox" name="showPoints" /> All points</label>
+          <label class="fx-check"><input type="checkbox" name="yZero" /> Y axis from zero</label>
+          <label class="fx-check"><input type="checkbox" name="animate" /> Draw-in animation</label>
+        </div>
+      </section>
+
+      <!-- 6. Tooltip -->
+      <section>
+        <h2><span class="fx-num">6</span>Tooltip</h2>
+        <label class="fx-field">Style
+          <select name="tooltipMode">
+            <option value="custom">Smart tooltip (value + growth)</option>
+            <option value="tableau">Tableau tooltip (edit via Tooltip button)</option>
+            <option value="off">Off</option>
+          </select>
+        </label>
+      </section>
+    </main>
+
+    <footer class="fx-foot">
+      <button type="button" id="reset" class="fx-btn ghost">Reset to defaults</button>
+      <span class="fx-spacer"></span>
+      <button type="button" id="cancel" class="fx-btn ghost">Cancel</button>
+      <button type="button" id="ok" class="fx-btn primary">OK</button>
+    </footer>
+  </form>
+</body>
+</html>

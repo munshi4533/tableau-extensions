@@ -1,0 +1,24 @@
+{
+  "name": "__NAME__",
+  "manifestName": "__MANIFEST__",
+  "version": "0.1.0",
+  "description": "Describe what this extension shows.",
+  "entry": "index.html",
+  "icon": "icon.png",
+  "formatDialog": false,
+  "previewPages": ["index.html"],
+  "encodings": [
+    {
+      "id": "category", "name": "Category",
+      "roles": ["discrete-dimension"],
+      "maxCount": 1, "icon": "letter-a",
+      "tooltip": "A dimension: one bar per value."
+    },
+    {
+      "id": "value", "name": "Value",
+      "dataType": "numeric", "roles": ["continuous-measure"],
+      "maxCount": 1, "icon": "metric",
+      "tooltip": "The measure to show."
+    }
+  ]
+}

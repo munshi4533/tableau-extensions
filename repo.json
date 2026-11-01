@@ -1,0 +1,12 @@
+{
+  "githubUser": "munshi4533",
+  "repoName": "tableau-extensions",
+  "localPort": 8765,
+  "idPrefix": "com.munshi.tableau",
+  "author": {
+    "name": "Munshi Muntasir Islam",
+    "email": "munshi@careflo.health",
+    "organization": "CareFlo",
+    "website": "https://careflo.health"
+  }
+}
