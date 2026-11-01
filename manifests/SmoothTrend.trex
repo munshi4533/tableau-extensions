@@ -5,7 +5,7 @@
     <default-locale>en_US</default-locale>
     <name resource-id="name"/>
     <description>Smooth line trend with a KPI header (latest, MTD, QTD, YTD or your own calculation), growth/degrowth coloring and smart tooltips.</description>
-    <author name="Munshi Muntasir Islam" email="munshi@careflo.health" organization="CareFlo" website="https://careflo.health"/>
+    <author name="Munshi Muntasir Islam" email="mmuislam.munshi@gmail.com" organization="CareFlo" website="https://www.linkedin.com/in/muntasir-analyst-bd/"/>
     <min-api-version>1.11</min-api-version>
     <source-location>
       <url>https://munshi4533.github.io/tableau-extensions/extensions/smooth-trend/index.html</url>
