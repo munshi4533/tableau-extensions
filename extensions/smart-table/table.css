@@ -26,7 +26,7 @@ html, body {
 .t-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 8px; flex: none; }
 .t-toolbar[hidden] { display: none; }
 .t-title-wrap { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
-.t-title { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.t-title { font-weight: 600; font-size: var(--title-size, 16px); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .t-title:empty { display: none; }
 .t-count { color: var(--ink-3); font-size: 11px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .t-tools { display: flex; align-items: center; gap: 6px; flex: none; }
@@ -134,3 +134,14 @@ body .t-root .t-body .t-row.sel { background-image: linear-gradient(var(--sel), 
 .t-dl-note { color: var(--ink-3); font-size: 10px; padding: 4px 10px 6px; }
 .t-toast { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 30; background: #1f1f1d; color: #fff; padding: 7px 12px; border-radius: 6px; font-size: 12px; box-shadow: 0 6px 18px rgba(0,0,0,.2); }
 .t-toast[hidden] { display: none; }
+
+/* ---------- header: wrapping text + adjustable height ---------- */
+.t-head { height: auto; min-height: max(var(--row-h), var(--head-min, 0px)); align-items: stretch; }
+.t-head .t-cell { height: auto; padding-top: 5px; padding-bottom: 5px; }
+.t-head .t-cell .lbl {
+  white-space: normal; line-height: 1.25; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--head-lines, 3); overflow: hidden;
+}
+.head-1 .t-head .t-cell .lbl { display: block; white-space: nowrap; text-overflow: ellipsis; }
+.t-head-rz { position: absolute; left: 0; right: 0; bottom: -3px; height: 7px; cursor: row-resize; z-index: 6; }
+.t-head-rz:hover { background: color-mix(in srgb, var(--accent) 30%, transparent); }

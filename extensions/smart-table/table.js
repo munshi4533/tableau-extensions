@@ -15,6 +15,10 @@
     title: '',
     showToolbar: true,
     showSearch: true,
+    titleSize: 16,
+    fitWidth: true, // stretch columns to fill the sheet width
+    headerLines: '3', // header text wraps up to this many lines: '1' | '2' | '3' | 'all'
+    headerHeight: 0, // minimum header height in px (0 = fit the text); drag the header's bottom edge to change
     showDownload: true,
     initialRows: '500', // rows loaded first: '100' | '500' | '1000' | '5000' | 'all'
     density: 'normal', // compact | normal | comfortable
@@ -92,11 +96,16 @@
     } catch (e) { /* not available */ }
 
     scroller.addEventListener('scroll', scheduleRows, { passive: true });
-    new ResizeObserver(debounce(() => { buildPool(); renderRows(true); }, 60)).observe(scroller);
+    new ResizeObserver(debounce(() => { if (cfg.fitWidth && N) { layout(); afterView(true); } else { buildPool(); renderRows(true); } }, 60)).observe(scroller);
     bodyEl.addEventListener('click', onRowClick);
     bodyEl.addEventListener('mousedown', (e) => { if (e.shiftKey || e.ctrlKey || e.metaKey) e.preventDefault(); }); // no text highlight on multi-select
     headEl.addEventListener('click', onHeadClick);
     headEl.addEventListener('mousedown', onResizeStart);
+    headEl.addEventListener('mousedown', onHeadHeightStart);
+    headEl.addEventListener('dblclick', (e) => {
+      if (!e.target.classList.contains('t-head-rz')) return;
+      cfg.headerHeight = 0; document.documentElement.style.setProperty('--head-min', '0px'); saveSettingsQuiet(); renderRows(true);
+    });
     $('search').addEventListener('input', debounce((e) => { search = e.target.value.trim().toLowerCase(); recompute(); }, 150));
     $('loadAll').addEventListener('click', () => load(true));
     $('dl').addEventListener('click', (e) => { e.stopPropagation(); toggleDownloadMenu(); });
@@ -247,12 +256,15 @@
     root.setProperty('--font', (+cfg.fontSize || 12) + 'px');
     root.setProperty('--head-bg', cfg.headerBg);
     root.setProperty('--head-ink', cfg.headerInk);
+    root.setProperty('--title-size', (+cfg.titleSize || 16) + 'px');
+    root.setProperty('--head-lines', cfg.headerLines === 'all' ? 99 : (+cfg.headerLines || 3));
+    root.setProperty('--head-min', (+cfg.headerHeight || 0) + 'px');
     root.setProperty('--accent', cfg.accent);
     const base = cfg.background === 'transparent' ? 'transparent' : cfg.background === 'custom' ? cfg.bgColor : '#ffffff';
     root.setProperty('--bg', base);
     root.setProperty('--base', base);
     root.setProperty('--solid', base === 'transparent' ? '#ffffff' : base);
-    document.body.className = [cfg.zebra ? 'zebra' : '', 'grid-' + cfg.gridlines].join(' ');
+    document.body.className = [cfg.zebra ? 'zebra' : '', 'grid-' + cfg.gridlines, String(cfg.headerLines) === '1' ? 'head-1' : ''].join(' ');
 
     $('toolbar').hidden = !cfg.showToolbar;
     $('dl').hidden = !cfg.showDownload;
@@ -280,7 +292,12 @@
       let w = +cc.width;
       if (!w) {
         ctx.font = '600 ' + font;
-        w = ctx.measureText(c.label).width + 44; // label + sort/filter icons
+        const labelW = ctx.measureText(c.label).width;
+        if (String(cfg.headerLines) === '1') w = labelW + 44; // label + sort/filter icons on one line
+        else { // long headers wrap: only the longest word must fit, the rest goes to the next lines
+          const word = Math.max(...c.label.split(/\s+/).map((t) => ctx.measureText(t).width));
+          w = Math.max(word + 44, Math.min(labelW + 44, 150));
+        }
         ctx.font = font;
         const step = Math.max(1, Math.floor(N / 400));
         const k = c.num ? 1.13 : 1.02; // the table uses tabular (wider) digits; canvas measures proportional ones
@@ -293,6 +310,14 @@
         w = Math.min(Math.max(Math.ceil(w), 64), 360);
       }
       layoutCols.push({ col: c, key: c.key, label: c.label, w });
+    }
+    // spread spare width over the columns (manually resized ones keep their width)
+    const avail = (scroller.clientWidth || 0) - 1;
+    const sum = layoutCols.reduce((a, lc) => a + lc.w, 0);
+    if (cfg.fitWidth && avail > sum) {
+      const flex = layoutCols.filter((lc) => !lc.rn && !(cfg.columns[lc.key] || {}).width);
+      const base = flex.reduce((a, lc) => a + lc.w, 0);
+      if (base) flex.forEach((lc) => { lc.w = Math.floor(lc.w + (avail - sum) * lc.w / base); });
     }
     for (const lc of layoutCols) { lc.x = x; x += lc.w; }
     totalW = x;
@@ -490,11 +515,28 @@
       const s = sort && sort.key === lc.key ? (sort.dir > 0 ? '▲' : '▼') : '';
       const on = filters.has(lc.key) ? ' on' : '';
       const just = lc.col.align === 'right' ? 'flex-direction:row-reverse;' : '';
-      return `<div class="${cellClass(lc, i)}" style="${style}${just}" data-key="${esc(lc.key)}" title="${esc(lc.col.name)}">` +
-        `<span class="lbl">${esc(lc.label)}</span><span class="sort">${s}</span>` +
+      return `<div class="${cellClass(lc, i)}" style="${style}${just}" data-key="${esc(lc.key)}" title="${esc(lc.label)}">` +
+        `<span class="lbl"${lc.col.align === 'right' ? ' style="text-align:right"' : lc.col.align === 'center' ? ' style="text-align:center"' : ''}>${esc(lc.label)}</span><span class="sort">${s}</span>` +
         `<button class="flt${on}" title="Sort &amp; filter" data-flt="${esc(lc.key)}"><svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><path d="M3 5h18l-7 8v6l-4-2v-4z"/></svg></button>` +
         `<span class="rz" data-rz="${i}"></span></div>`;
-    }).join('');
+    }).join('') + '<div class="t-head-rz" title="Drag to make the header taller (double-click to reset)"></div>';
+  }
+
+  // drag the header's bottom edge to make it taller
+  function onHeadHeightStart (e) {
+    if (!e.target.classList.contains('t-head-rz')) return;
+    e.preventDefault(); e.stopPropagation();
+    const y0 = e.clientY; const h0 = headEl.offsetHeight;
+    const move = (ev) => { document.documentElement.style.setProperty('--head-min', Math.max(rowH, Math.min(240, h0 + ev.clientY - y0)) + 'px'); };
+    const up = () => {
+      document.removeEventListener('mousemove', move);
+      document.removeEventListener('mouseup', up);
+      cfg.headerHeight = Math.round(headEl.offsetHeight);
+      saveSettingsQuiet();
+      renderRows(true);
+    };
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', up);
   }
 
   function renderFoot () {

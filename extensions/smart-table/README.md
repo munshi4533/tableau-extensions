@@ -49,7 +49,7 @@ Click the download icon in the top-right corner:
 
 ## Format Extension
 
-**Table tab:** title, row count and search bar; row height; font size; lines; striped rows; row numbers; freeze the first 1–4 columns; totals row (sum or average, and % columns are always averaged); header colors; selection color; background (white, transparent or custom); whether clicking rows selects in Tableau.
+**Table tab:** title and title size, row count and search bar; row height; font size; header text that wraps over 1, 2, 3 or all lines; header height (or drag the header's bottom edge, double-click to reset); stretch columns to fill the width; lines; striped rows; row numbers; freeze the first 1–4 columns; totals row (sum or average, and % columns are always averaged); header colors; selection color; background (white, transparent or custom); whether clicking rows selects in Tableau.
 
 **Conditional colors tab:** add as many rules as you like. Each rule colors one column, based on that column or any other column (including Detail fields).
 
@@ -63,5 +63,6 @@ Click the download icon in the top-right corner:
 **Columns tab:** rename headers, choose alignment, hide columns.
 
 ## Version history
+- **1.2.0**: long column names wrap instead of being cut (up to 3 lines by default); taller header by dragging its bottom edge or setting a height; title size option (default 16); columns stretch to fill the width.
 - **1.1.0**: loads the first 500 rows by default (setting) with a *Load all* button; download icon in the top-right (CSV of loaded or all rows, or copy to clipboard).
 - **1.0.0**: first release.

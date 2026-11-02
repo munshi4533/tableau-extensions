@@ -4,13 +4,13 @@
   <base href="../" />
   <!-- GENERATED preview (tools/build.py): sample data instead of Tableau -->
   <meta charset="utf-8" />
-  <meta name="ext-version" content="1.1.1" />
+  <meta name="ext-version" content="1.2.0" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Format Smart Table (preview)</title>
-  <link rel="stylesheet" href="./format.css?v=1.1.1" />
+  <link rel="stylesheet" href="./format.css?v=1.2.0" />
   <script>window.tableau = window.parent.__mockDialogTableau;</script>
-  <script src="./rules.js?v=1.1.1"></script>
-  <script src="./format.js?v=1.1.1" defer></script>
+  <script src="./rules.js?v=1.2.0"></script>
+  <script src="./format.js?v=1.2.0" defer></script>
 </head>
 <body>
   <form id="form" class="fx" autocomplete="off">
@@ -30,7 +30,14 @@
         <section>
           <h2>Header bar</h2>
           <label class="fx-check"><input type="checkbox" name="showToolbar" /> Show title, row count and filters bar</label>
-          <label class="fx-field">Title <input type="text" name="title" placeholder="No title" /></label>
+          <div class="fx-grid">
+            <label class="fx-field">Title <input type="text" name="title" placeholder="No title" /></label>
+            <label class="fx-field">Title size
+              <select name="titleSize">
+                <option value="13">13</option><option value="14">14</option><option value="16">16</option><option value="18">18</option><option value="20">20</option><option value="24">24</option>
+              </select>
+            </label>
+          </div>
           <div class="fx-grid">
             <label class="fx-check"><input type="checkbox" name="showSearch" /> Search box</label>
             <label class="fx-check"><input type="checkbox" name="showDownload" /> Download button</label>
@@ -64,6 +71,17 @@
                 <option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="16">16</option>
               </select>
             </label>
+            <label class="fx-field">Header text
+              <select name="headerLines">
+                <option value="1">One line (cut long names)</option>
+                <option value="2">Wrap up to 2 lines</option>
+                <option value="3">Wrap up to 3 lines</option>
+                <option value="all">Wrap fully</option>
+              </select>
+            </label>
+            <label class="fx-field">Header height (px)
+              <input type="number" name="headerHeight" min="0" max="240" step="4" placeholder="0 = fit text" />
+            </label>
             <label class="fx-field">Lines
               <select name="gridlines">
                 <option value="rows">Between rows</option>
@@ -87,6 +105,7 @@
           <div class="fx-grid">
             <label class="fx-check"><input type="checkbox" name="zebra" /> Striped rows</label>
             <label class="fx-check"><input type="checkbox" name="rowNumbers" /> Row numbers</label>
+            <label class="fx-check"><input type="checkbox" name="fitWidth" /> Stretch columns to fill width</label>
           </div>
         </section>
         <section>

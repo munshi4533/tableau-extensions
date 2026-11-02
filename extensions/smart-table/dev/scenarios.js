@@ -48,5 +48,18 @@
   MockTableau.scenario('customers200k', (M) => customers(M, 200000, false));
   MockTableau.scenario('small', (M) => customers(M, 40, false));
   MockTableau.scenario('detail', (M) => customers(M, 5000, true));
+  MockTableau.scenario('longheaders', (M) => {
+    const rnd = rng(7);
+    const columns = ['Customer ID', 'Overall Status', 'Customer Summary', 'AGG(No. of Months Active (Last 12 Months))', 'SUM(Total Transfer Amount (Last 12 Months) SAR)', 'SUM(Net Profit (Last 12 Months) SAR)'];
+    const types = ['string', 'string', 'string', 'int', 'float', 'float'];
+    const data = [];
+    for (let i = 0; i < 3000; i++) {
+      const id = String(29024385719 - i * 13771); const m = Math.floor(rnd() * 3); const amt = Math.round(rnd() * 450000 * 100) / 100; const np = Math.round(amt * 0.006 * 100) / 100;
+      const sum = `No transfer for ${2 + m} months · net profit SAR ${np >= 1000 ? (np / 1000).toFixed(1) + 'K' : Math.round(np)} in 12 months`;
+      const f2 = (v) => v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      data.push([M.dv(id, id, id), M.dv('At Risk', 'At Risk', 'At Risk'), M.dv(sum, sum, sum), M.dv(m, m, String(m)), M.dv(amt, amt, f2(amt)), M.dv(np, np, f2(np))]);
+    }
+    return { columns, types, data, encodings: columns.map((c) => ({ id: 'fields', field: M.field(c) })) };
+  });
   MockTableau.scenario('empty', () => ({ columns: [], data: [], encodings: [] }));
 })();

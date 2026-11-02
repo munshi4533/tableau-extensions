@@ -20,7 +20,7 @@ h2 { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 0 0 
   background: color-mix(in srgb, var(--accent) 14%, white); color: var(--accent); font-size: 10px; font-weight: 700; }
 
 .fx-field { display: block; margin: 8px 0 2px; color: var(--ink-2); font-weight: 500; }
-.fx-field select, .fx-field input[type=text] {
+.fx-field select, .fx-field input[type=text], .fx-field input[type=number] {
   display: block; width: 100%; margin-top: 4px; padding: 6px 8px; font: inherit; color: var(--ink-1);
   border: 1px solid var(--field); border-radius: 6px; background: white; }
 .fx-field select:focus, .fx-field input:focus { outline: 2px solid color-mix(in srgb, var(--accent) 35%, white); border-color: var(--accent); }

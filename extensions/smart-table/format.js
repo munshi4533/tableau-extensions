@@ -37,7 +37,7 @@
       const el = e.target;
       if (el.name && el.name in DEFAULTS && !el.closest('#rules') && !el.closest('#columns')) {
         cfg[el.name] = el.type === 'checkbox' ? el.checked : el.value;
-        if (el.name === 'freeze' || el.name === 'fontSize') cfg[el.name] = +el.value;
+        if (['freeze', 'fontSize', 'titleSize', 'headerHeight'].includes(el.name)) cfg[el.name] = +el.value || 0;
         refresh();
         scheduleSave();
       }
