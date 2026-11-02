@@ -15,6 +15,8 @@
     title: '',
     showToolbar: true,
     showSearch: true,
+    showDownload: true,
+    initialRows: '500', // rows loaded first: '100' | '500' | '1000' | '5000' | 'all'
     density: 'normal', // compact | normal | comfortable
     fontSize: 12,
     zebra: true,
@@ -63,6 +65,8 @@
   let totalW = 0;
   let rafPending = false;
   let loadingToken = 0;
+  let totalRows = 0; // rows Tableau has for this sheet
+  let loadedAll = true; // false while only the first rows are loaded
 
   const $ = (id) => document.getElementById(id);
   const scroller = $('scroller');
@@ -82,9 +86,9 @@
     loadSettings();
 
     // Filters and actions from other sheets change our summary data -> reload
-    worksheet.addEventListener(tableau.TableauEventType.SummaryDataChanged, debounce(load, 150));
+    worksheet.addEventListener(tableau.TableauEventType.SummaryDataChanged, debounce(() => load(false), 150));
     try {
-      tableau.extensions.settings.addEventListener(tableau.TableauEventType.SettingsChanged, () => { loadSettings(); applySettings(); });
+      tableau.extensions.settings.addEventListener(tableau.TableauEventType.SettingsChanged, onSettingsChanged);
     } catch (e) { /* not available */ }
 
     scroller.addEventListener('scroll', scheduleRows, { passive: true });
@@ -94,13 +98,16 @@
     headEl.addEventListener('click', onHeadClick);
     headEl.addEventListener('mousedown', onResizeStart);
     $('search').addEventListener('input', debounce((e) => { search = e.target.value.trim().toLowerCase(); recompute(); }, 150));
+    $('loadAll').addEventListener('click', () => load(true));
+    $('dl').addEventListener('click', (e) => { e.stopPropagation(); toggleDownloadMenu(); });
     $('clearFilters').addEventListener('click', () => { filters.clear(); search = ''; $('search').value = ''; recompute(); });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') { if (!$('popover').hidden) closePopover(); else if (selected.size) { selected.clear(); syncSelection(); renderRows(true); } }
     });
+    document.addEventListener('mousedown', (e) => { if (!$('dlMenu').hidden && !e.target.closest('#dlMenu') && !e.target.closest('#dl')) $('dlMenu').hidden = true; });
     document.addEventListener('mousedown', (e) => { if (!$('popover').hidden && !$('popover').contains(e.target) && !e.target.closest('.flt')) closePopover(); });
 
-    load();
+    load(false);
   }
 
   // ================================================================ data
@@ -114,7 +121,11 @@
     return map;
   }
 
-  async function load () {
+  // Loads only the first rows (cfg.initialRows) unless all === true. Reading fewer rows from Tableau
+  // is what makes big sheets open fast; "Load all" fetches the rest.
+  async function load (all) {
+    all = all === true;
+    const limit = all || cfg.initialRows === 'all' ? Infinity : (+cfg.initialRows || 500);
     const token = ++loadingToken;
     const t0 = performance.now();
     try {
@@ -122,26 +133,29 @@
       const fields = enc.fields || [];
       if (!fields.length) { N = 0; cols = []; shown = []; layout(); status('Drag fields onto the <b>Fields</b> shelf to build the table.<br><span style="color:var(--ink-3)">Dimensions and measures, in the order you want the columns.</span>'); return; }
 
-      const reader = await worksheet.getSummaryDataReaderAsync(PAGE_ROWS, { ignoreSelection: true });
+      if (all) status('Loading all rows…');
+      const reader = await worksheet.getSummaryDataReaderAsync(Math.min(limit, PAGE_ROWS), { ignoreSelection: true });
       const total = reader.totalRowCount || 0;
       const tRead = performance.now();
       let built = null;
       let offset = 0;
       let tWait = 0;
-      for (let p = 0; p < reader.pageCount; p++) {
+      for (let p = 0; p < reader.pageCount && offset < limit; p++) {
         if (token !== loadingToken) { await reader.releaseAsync(); return; }
         const tw = performance.now();
         const page = await reader.getPageAsync(p);
         tWait += performance.now() - tw;
-        if (!built) built = allocate(page.columns, Math.max(total, page.data.length));
+        if (!built) built = allocate(page.columns, Math.max(Math.min(total, limit), page.data.length));
         fill(built, page, offset);
         offset += page.data.length;
-        if (reader.pageCount > 1) status(`Loading rows… ${offset.toLocaleString()} of ${total.toLocaleString()}`);
+        if (reader.pageCount > 1 && limit > PAGE_ROWS) status(`Loading rows… ${offset.toLocaleString()} of ${total.toLocaleString()}`);
       }
       await reader.releaseAsync();
       if (token !== loadingToken) return;
       if (!built) built = allocate([], 0);
       const tFin = performance.now();
+      totalRows = Math.max(total, offset);
+      loadedAll = offset >= totalRows;
       finish(built, offset, fields);
       console.log(`[Smart Table] ${N.toLocaleString()} rows × ${cols.length} columns in ${Math.round(performance.now() - t0)} ms ` +
         `(Tableau: ${Math.round(tRead - t0 + tWait)} ms, reading: ${Math.round(tFin - tRead - tWait)} ms, layout+render: ${Math.round(performance.now() - tFin)} ms)`);
@@ -241,6 +255,7 @@
     document.body.className = [cfg.zebra ? 'zebra' : '', 'grid-' + cfg.gridlines].join(' ');
 
     $('toolbar').hidden = !cfg.showToolbar;
+    $('dl').hidden = !cfg.showDownload;
     $('title').textContent = cfg.title || '';
     $('search').parentElement.hidden = !cfg.showSearch;
 
@@ -357,12 +372,104 @@
     const nf = filters.size + (search ? 1 : 0);
     $('clearFilters').hidden = !nf;
     $('clearFilters').textContent = `Clear ${nf} filter${nf > 1 ? 's' : ''} ✕`;
-    $('count').textContent = !N ? '' : view.length === N ? `${N.toLocaleString()} rows` : `${view.length.toLocaleString()} of ${N.toLocaleString()} rows`;
-    if (selected.size) $('count').textContent += ` · ${selected.size.toLocaleString()} selected`;
+    updateCount();
     renderHead();
     renderFoot();
     renderRows(true);
     if (N && !view.length) status('No rows match the filters.'); else if (N) status(null);
+  }
+
+  function updateCount () {
+    const f = (n) => n.toLocaleString();
+    let t = '';
+    if (N) {
+      if (loadedAll) t = view.length === N ? `${f(N)} rows` : `${f(view.length)} of ${f(N)} rows`;
+      else t = view.length === N ? `First ${f(N)} of ${f(totalRows)} rows` : `${f(view.length)} of first ${f(N)} (${f(totalRows)} total)`;
+    }
+    if (selected.size) t += ` · ${f(selected.size)} selected`;
+    $('count').textContent = t;
+    $('loadAll').hidden = loadedAll || !N;
+    $('loadAll').textContent = `Load all ${f(totalRows)}`;
+    $('toolbar').hidden = !(cfg.showToolbar || (!loadedAll && N));
+  }
+
+  // ================================================================ download / copy
+  function toggleDownloadMenu () {
+    const m = $('dlMenu');
+    if (!m.hidden) { m.hidden = true; return; }
+    const f = (n) => n.toLocaleString();
+    const items = [];
+    if (loadedAll) items.push(['csv', `Download CSV <small>${f(view.length)} rows</small>`]);
+    else {
+      items.push(['csv', `Download CSV – loaded rows <small>${f(view.length)}</small>`]);
+      items.push(['csvAll', `Download CSV – all rows <small>${f(totalRows)}, loads them first</small>`]);
+    }
+    items.push(['copy', `Copy to clipboard <small>paste into Excel</small>`]);
+    m.innerHTML = items.map(([k, t]) => `<button data-dl="${k}">${t}</button>`).join('') +
+      (selected.size ? '<div class="t-dl-note">Selected rows are not exported separately; filters and sort are.</div>' : '');
+    m.hidden = false;
+    m.onclick = async (e) => {
+      const b = e.target.closest('[data-dl]');
+      if (!b) return;
+      m.hidden = true;
+      if (b.dataset.dl === 'csvAll') { await load(true); downloadCsv(); } else if (b.dataset.dl === 'csv') downloadCsv(); else copyRows();
+    };
+  }
+
+  function exportCols () { return (layout.cols || []).filter((lc) => !lc.rn); }
+
+  function cellOut (c, r) {
+    if (c.type === 'number') { const v = c.num[r]; return v === v ? String(v) : ''; }
+    if (c.type === 'date') {
+      const v = c.num[r];
+      if (v !== v) return '';
+      const iso = new Date(v).toISOString();
+      return iso.endsWith('T00:00:00.000Z') ? iso.slice(0, 10) : iso.slice(0, 19).replace('T', ' ');
+    }
+    return c.txt[r] || '';
+  }
+
+  function build (sep) {
+    const lcs = exportCols();
+    const q = (v) => (/[",\n\r\t]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v);
+    const lines = [lcs.map((lc) => q(lc.label)).join(sep)];
+    for (let k = 0; k < view.length; k++) {
+      const r = view[k];
+      let line = '';
+      for (let j = 0; j < lcs.length; j++) line += (j ? sep : '') + q(cellOut(lcs[j].col, r));
+      lines.push(line);
+    }
+    return lines.join('\r\n');
+  }
+
+  function downloadCsv () {
+    const name = (cfg.title || 'table').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') + '-' + new Date().toISOString().slice(0, 10) + '.csv';
+    const blob = new Blob(['\ufeff' + build(',')], { type: 'text/csv;charset=utf-8' }); // BOM: Excel reads Arabic text correctly
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    toast(`Downloading ${view.length.toLocaleString()} rows (${name})`);
+  }
+
+  function copyRows () {
+    const text = build('\t');
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.cssText = 'position:fixed;left:-9999px;top:0';
+    document.body.appendChild(ta); ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    ta.remove();
+    if (!ok && navigator.clipboard) navigator.clipboard.writeText(text).then(() => toast(`Copied ${view.length.toLocaleString()} rows – paste into Excel`), () => toast('Copy was blocked here – use Download CSV'));
+    else toast(ok ? `Copied ${view.length.toLocaleString()} rows – paste into Excel` : 'Copy was blocked here – use Download CSV');
+  }
+
+  let toastTimer = null;
+  function toast (msg) {
+    const t = $('toast');
+    t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3500);
   }
 
   // ================================================================ rendering
@@ -509,8 +616,7 @@
 
   function afterSelection () {
     renderRows(true);
-    const base = view.length === N ? `${N.toLocaleString()} rows` : `${view.length.toLocaleString()} of ${N.toLocaleString()} rows`;
-    $('count').textContent = base + (selected.size ? ` · ${selected.size.toLocaleString()} selected` : '');
+    updateCount();
   }
 
   function syncSelection (e) {
@@ -668,8 +774,13 @@
     } catch (e) {
       if (!(tableau.ErrorCodes && e.errorCode === tableau.ErrorCodes.DialogClosedByUser)) console.error(e);
     }
+    onSettingsChanged();
+  }
+
+  function onSettingsChanged () {
+    const prevRows = cfg.initialRows;
     loadSettings();
-    applySettings();
+    if (prevRows !== cfg.initialRows && !(loadedAll && cfg.initialRows === 'all')) load(false); else applySettings();
   }
 
   // ================================================================ helpers

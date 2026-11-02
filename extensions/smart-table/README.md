@@ -22,6 +22,18 @@ In the browser preview, 200,000 rows × 9 columns took about 150 ms to process a
 | **Fields** | every column you want, in order: dimensions and measures |
 | **Detail** (Tableau's built-in tile) | fields you don't want to show but need for colors or actions |
 
+## Fast start: first rows only
+
+The table loads only the **first 500 rows** by default, so even very large sheets open quickly. The top bar shows "First 500 of 52,000 rows". Click **Load all 52,000** to fetch the rest.
+Sort, filter, search and totals work on the loaded rows. Change the number in **Format Extension → Table → Speed** (100, 500, 1,000, 5,000 or All). When filters from other sheets change the data, the table goes back to the first rows.
+
+## Download
+
+Click the download icon in the top-right corner:
+- **Download CSV**: the rows as they are now, with your filters and sort. Numbers and dates are exported as plain values, so Excel can calculate with them. Arabic text keeps its encoding.
+- **Download CSV – all rows**: loads every row first, then downloads with your filters and sort.
+- **Copy to clipboard**: paste straight into Excel.
+
 ## In the table
 
 - **Sort:** click a header (▲ ▼ then off), or use the header's funnel menu.
@@ -51,4 +63,5 @@ In the browser preview, 200,000 rows × 9 columns took about 150 ms to process a
 **Columns tab:** rename headers, choose alignment, hide columns.
 
 ## Version history
+- **1.1.0**: loads the first 500 rows by default (setting) with a *Load all* button; download icon in the top-right (CSV of loaded or all rows, or copy to clipboard).
 - **1.0.0**: first release.

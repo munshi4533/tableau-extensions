@@ -30,7 +30,23 @@
           <h2>Header bar</h2>
           <label class="fx-check"><input type="checkbox" name="showToolbar" /> Show title, row count and filters bar</label>
           <label class="fx-field">Title <input type="text" name="title" placeholder="No title" /></label>
-          <label class="fx-check"><input type="checkbox" name="showSearch" /> Search box</label>
+          <div class="fx-grid">
+            <label class="fx-check"><input type="checkbox" name="showSearch" /> Search box</label>
+            <label class="fx-check"><input type="checkbox" name="showDownload" /> Download button</label>
+          </div>
+        </section>
+        <section>
+          <h2>Speed</h2>
+          <label class="fx-field">Rows to load first
+            <select name="initialRows">
+              <option value="100">First 100 rows</option>
+              <option value="500">First 500 rows</option>
+              <option value="1000">First 1,000 rows</option>
+              <option value="5000">First 5,000 rows</option>
+              <option value="all">All rows (slower on big sheets)</option>
+            </select>
+          </label>
+          <p class="fx-hint">Big sheets open fast with only the first rows. Viewers click <b>Load all</b> (top bar) to get every row. Sort, filter, search and totals work on the loaded rows. Choose "All rows" if they must always cover everything.</p>
         </section>
         <section>
           <h2>Layout</h2>

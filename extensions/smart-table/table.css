@@ -118,3 +118,19 @@ body .t-root .t-body .t-row.sel { background-image: linear-gradient(var(--sel), 
 .t-pop .acts { display: flex; justify-content: space-between; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--line); }
 .t-pop .linkbtn { border: 0; background: none; color: var(--accent); cursor: pointer; font: inherit; font-size: 11px; padding: 0; }
 .t-pop .hint { color: var(--ink-3); font-size: 10px; margin: -2px 0 6px; }
+
+/* ---------- load all, download menu, toast ---------- */
+.t-chip.solid { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+.t-iconbtn { border: 1px solid #d6d5cf; background: #fff; color: var(--ink-2); border-radius: 6px; width: 28px; height: 26px; display: grid; place-items: center; cursor: pointer; padding: 0; }
+.t-iconbtn:hover { color: var(--ink-1); background: #f6f6f3; }
+.t-iconbtn[hidden] { display: none; }
+.t-search[hidden] { display: none; }
+.t-menu { position: fixed; top: 36px; right: 8px; z-index: 25; min-width: 240px; background: #fff; border: 1px solid rgba(11,11,11,.12);
+  border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,.15); padding: 4px; }
+.t-menu[hidden] { display: none; }
+.t-menu button { display: block; width: 100%; text-align: left; font: inherit; border: 0; background: none; padding: 7px 10px; border-radius: 5px; cursor: pointer; color: var(--ink-1); }
+.t-menu button:hover { background: #f3f3f0; }
+.t-menu small { color: var(--ink-3); margin-left: 4px; }
+.t-dl-note { color: var(--ink-3); font-size: 10px; padding: 4px 10px 6px; }
+.t-toast { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 30; background: #1f1f1d; color: #fff; padding: 7px 12px; border-radius: 6px; font-size: 12px; box-shadow: 0 6px 18px rgba(0,0,0,.2); }
+.t-toast[hidden] { display: none; }

@@ -1,7 +1,7 @@
 {
   "name": "Smart Table",
   "manifestName": "SmartTable",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Fast flat table for large data (virtual scrolling): sort and filter any column, search, conditional colors, totals, and row selection that drives dashboard actions.",
   "entry": "index.html",
   "icon": "icon.png",

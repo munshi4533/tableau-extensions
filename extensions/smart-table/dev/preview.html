@@ -20,11 +20,15 @@
         <div id="count" class="t-count"></div>
       </div>
       <div class="t-tools">
+        <button id="loadAll" class="t-chip solid" hidden title="Only the first rows are loaded so the table opens fast"></button>
         <button id="clearFilters" class="t-chip" hidden></button>
         <label class="t-search">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
           <input id="search" type="search" placeholder="Search" autocomplete="off" />
         </label>
+        <button id="dl" class="t-iconbtn" title="Download" aria-label="Download">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+        </button>
       </div>
     </div>
     <div id="scroller" class="t-scroller" tabindex="0">
@@ -37,5 +41,7 @@
     <div id="status" class="t-status" hidden></div>
   </div>
   <div id="popover" class="t-pop" hidden></div>
+  <div id="dlMenu" class="t-menu" hidden></div>
+  <div id="toast" class="t-toast" hidden></div>
 </body>
 </html>
