@@ -241,7 +241,8 @@ def main():
     registry = []
     for m in exts:
         stamp_versions(m)
-        path = f"extensions/{m['id']}/{m['entry']}?v={m['version']}"
+        # One stable, general link per extension (no version in it): .../extensions/<folder>/
+        path = f"extensions/{m['id']}/" + ('' if m['entry'] == 'index.html' else m['entry'])
         (OUT / f"{m['manifestName']}.trex").write_text(manifest(m, repo, f'{base}/{path}', False))
         (OUT / 'localhost' / f"{m['manifestName']}.trex").write_text(manifest(m, repo, f'{local}/{path}', True))
         build_previews(m)
