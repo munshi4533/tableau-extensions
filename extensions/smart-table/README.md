@@ -63,6 +63,7 @@ Click the download icon in the top-right corner:
 **Columns tab:** rename headers, choose alignment, hide columns.
 
 ## Version history
+- **1.2.1**: visible grip in the middle of the header's bottom edge for dragging it taller.
 - **1.2.0**: long column names wrap instead of being cut (up to 3 lines by default); taller header by dragging its bottom edge or setting a height; title size option (default 16); columns stretch to fill the width.
 - **1.1.0**: loads the first 500 rows by default (setting) with a *Load all* button; download icon in the top-right (CSV of loaded or all rows, or copy to clipboard).
 - **1.0.0**: first release.
