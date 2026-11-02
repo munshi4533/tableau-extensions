@@ -127,6 +127,25 @@ def manifest(m, repo, url, local):
 '''
 
 
+def stamp_versions(m):
+    """Cache-busting: every local .js/.css reference in the extension's pages gets ?v=<version>,
+    and the page gets <meta name="ext-version">. Tableau (and GitHub Pages) cache files hard;
+    a new version number makes them fetch the new code."""
+    ext = EXT_DIR / m['id']
+    ver = m['version']
+    ref = re.compile(r'((?:src|href)="(?:\./|\.\./)[^"?]+\.(?:js|css))(?:\?v=[^"]*)?"')
+    for page in ext.glob('*.html'):
+        html = page.read_text()
+        out = ref.sub(lambda mm: f'{mm.group(1)}?v={ver}"', html)
+        meta = f'<meta name="ext-version" content="{ver}" />'
+        if 'name="ext-version"' in out:
+            out = re.sub(r'<meta name="ext-version" content="[^"]*" />', meta, out)
+        else:
+            out = out.replace('<meta charset="utf-8" />', '<meta charset="utf-8" />\n  ' + meta, 1)
+        if out != html:
+            page.write_text(out)
+
+
 def build_previews(m):
     """dev/<page>-preview.html = the real page with the Tableau library swapped for the mock.
     A <base href="../"> keeps every relative path of the real page working unchanged."""
@@ -221,7 +240,8 @@ def main():
     local = f"http://localhost:{repo.get('localPort', 8765)}"
     registry = []
     for m in exts:
-        path = f"extensions/{m['id']}/{m['entry']}"
+        stamp_versions(m)
+        path = f"extensions/{m['id']}/{m['entry']}?v={m['version']}"
         (OUT / f"{m['manifestName']}.trex").write_text(manifest(m, repo, f'{base}/{path}', False))
         (OUT / 'localhost' / f"{m['manifestName']}.trex").write_text(manifest(m, repo, f'{local}/{path}', True))
         build_previews(m)

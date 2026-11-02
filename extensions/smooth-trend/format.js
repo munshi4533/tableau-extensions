@@ -15,6 +15,10 @@
   const $ = (id) => document.getElementById(id);
   const field = (name) => form.elements[name];
 
+  // show the version in the dialog header (stamped by tools/build.py)
+  const verMeta = document.querySelector('meta[name="ext-version"]');
+  if (verMeta) { const h = document.querySelector('.fx-top p'); if (h) h.textContent += ` · v${verMeta.content}`; }
+
   async function init () {
     const payload = await tableau.extensions.initializeDialogAsync();
     try { ({ ctx = {}, defaults: DEFAULTS = {} } = JSON.parse(payload || '{}')); } catch (e) { /* empty payload */ }

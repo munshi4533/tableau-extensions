@@ -966,7 +966,7 @@
   // Opens format.html in a Tableau dialog. The dialog saves settings itself (live preview),
   // which fires SettingsChanged here, so we only need to re-read on close.
   async function openFormatDialog () {
-    const url = new URL('format.html', window.location.href).href;
+    const url = new URL('format.html' + window.location.search, window.location.href).href; // keep ?v= so the dialog isn't served from cache
     const ctx = model && !model.empty && !model.error ? {
       xType: model.xType,
       grain: model.grain,
@@ -1015,5 +1015,6 @@
           : fmtYear)(date);
   }
 
+  { const v = document.querySelector('meta[name="ext-version"]'); console.log('[' + document.title + '] version', v ? v.content : '?'); }
   init();
 })();

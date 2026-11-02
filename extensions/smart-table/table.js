@@ -765,7 +765,7 @@
 
   // ================================================================ Format dialog
   async function openFormatDialog () {
-    const url = new URL('format.html', window.location.href).href;
+    const url = new URL('format.html' + window.location.search, window.location.href).href; // keep ?v= so the dialog isn't served from cache
     const ctx = {
       columns: cols.map((c) => ({ key: c.key, name: c.name, type: c.type, shown: shown.includes(c) }))
     };
@@ -817,5 +817,6 @@
   const cssEsc = (s) => (window.CSS && CSS.escape ? CSS.escape(s) : s);
   function debounce (fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 
+  { const v = document.querySelector('meta[name="ext-version"]'); console.log('[' + document.title + '] version', v ? v.content : '?'); }
   init();
 })();
