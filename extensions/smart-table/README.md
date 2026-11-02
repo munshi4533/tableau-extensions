@@ -63,6 +63,7 @@ Click the download icon in the top-right corner:
 **Columns tab:** rename headers, choose alignment, hide columns.
 
 ## Version history
+- **1.4.0**: right-click menu: Format Extension (when editing), sort/filter on headers, load all, clear filters, download CSV, copy.
 - **1.3.0**: *Text sizes* in Format → Table: column headers, dimensions (text cells) and values (number cells) separately; rows grow with the text.
 - **1.2.1**: visible grip in the middle of the header's bottom edge for dragging it taller.
 - **1.2.0**: long column names wrap instead of being cut (up to 3 lines by default); taller header by dragging its bottom edge or setting a height; title size option (default 16); columns stretch to fill the width.

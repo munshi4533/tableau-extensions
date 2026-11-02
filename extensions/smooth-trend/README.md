@@ -42,6 +42,7 @@ Smooth line trend with a KPI header, growth/degrowth coloring and smart tooltips
 Click a point to select it in Tableau (drives dashboard actions). Ctrl/Cmd-click adds to the selection.
 
 ## Version history
+- **1.6.0**: right-click the chart to open Format Extension (when editing).
 - **1.5.0**: *Text sizes* section in Format: title, headline number, value labels, date axis, value axis, legend & subtitle.
 - **1.4.0**: *Value labels* option: none, high & low, high/low & latest, or **all values**. Labels never overlap; when there is no room a label flips to the other side of the line or is skipped. Short (2.4M) or Tableau number format.
 - **1.3.0**: transparent background by default (Tableau's sheet/dashboard color shows through); Background option: Transparent / White / Custom color.

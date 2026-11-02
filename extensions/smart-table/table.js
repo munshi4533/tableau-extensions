@@ -7,7 +7,7 @@
  *    filters from other sheets reload the table (SummaryDataChanged)
  * No chart libraries needed.
  */
-/* global tableau, SmartRules */
+/* global tableau, SmartRules, ExtMenu */
 'use strict';
 
 (function () {
@@ -117,6 +117,27 @@
     });
     document.addEventListener('mousedown', (e) => { if (!$('dlMenu').hidden && !e.target.closest('#dlMenu') && !e.target.closest('#dl')) $('dlMenu').hidden = true; });
     document.addEventListener('mousedown', (e) => { if (!$('popover').hidden && !$('popover').contains(e.target) && !e.target.closest('.flt')) closePopover(); });
+
+    // right-click menu: Format Extension (authors), header sort/filter, load all, clear filters, download, copy
+    ExtMenu.attach((e) => {
+      const items = [];
+      const head = e.target.closest && e.target.closest('#head [data-key]');
+      if (head) {
+        const key = head.dataset.key;
+        items.push({ label: 'Sort ascending', icon: 'up', action: () => { sort = { key, dir: 1 }; recompute(true); } });
+        items.push({ label: 'Sort descending', icon: 'down', action: () => { sort = { key, dir: -1 }; recompute(true); } });
+        items.push({ label: 'Filter this column…', icon: 'filter', action: () => openPopover(key, head.querySelector('.flt') || head) });
+        items.push('separator');
+      }
+      if (ExtMenu.authoring()) items.push({ label: 'Format Extension…', icon: 'format', action: openFormatDialog }, 'separator');
+      if (N && !loadedAll) items.push({ label: `Load all ${totalRows.toLocaleString()} rows`, icon: 'load', action: () => load(true) });
+      if (filters.size || search) items.push({ label: 'Clear filters', icon: 'clear', action: () => $('clearFilters').click() });
+      if (N) {
+        items.push({ label: 'Download CSV', icon: 'download', hint: `${view.length.toLocaleString()} rows`, action: downloadCsv });
+        items.push({ label: 'Copy to clipboard', icon: 'copy', action: copyRows });
+      }
+      return items;
+    });
 
     load(false);
   }

@@ -5,7 +5,7 @@
  * KPI header (latest / previous / MTD / QTD / YTD / total / average / own calculation on the KPI shelf),
  * settings edited in Tableau's "Format Extension" dialog (format.html) and saved in the workbook.
  */
-/* global d3, tableau */
+/* global d3, tableau, ExtMenu */
 'use strict';
 
 (function () {
@@ -97,6 +97,12 @@
 
     const ro = new ResizeObserver(debounce(render, 60));
     ro.observe(document.body);
+
+    // right-click anywhere on the chart -> Format Extension (when editing the workbook)
+    ExtMenu.attach(() => {
+      hideTooltip();
+      return [ExtMenu.authoring() && { label: 'Format Extension…', icon: 'format', action: openFormatDialog }];
+    });
 
     refresh();
   }
