@@ -1,0 +1,17 @@
+{
+  "name": "Smart Table",
+  "manifestName": "SmartTable",
+  "version": "1.0.0",
+  "description": "Fast flat table for large data (virtual scrolling): sort and filter any column, search, conditional colors, totals, and row selection that drives dashboard actions.",
+  "entry": "index.html",
+  "icon": "icon.png",
+  "formatDialog": true,
+  "previewPages": ["index.html", "format.html"],
+  "encodings": [
+    {
+      "id": "fields", "name": "Fields",
+      "maxCount": 60, "icon": "grid",
+      "tooltip": "Every field you want as a column, in the order you want them. Dimensions and measures both work. Fields on Detail are not shown but can drive colors and actions."
+    }
+  ]
+}

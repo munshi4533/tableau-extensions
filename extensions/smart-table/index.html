@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Smart Table</title>
+  <link rel="stylesheet" href="./table.css" />
+  <script src="../../shared/lib/tableau.extensions.1.latest.min.js"></script>
+  <script src="./rules.js"></script>
+  <script src="./table.js" defer></script>
+</head>
+<body>
+  <div id="app" class="t-root">
+    <div id="toolbar" class="t-toolbar" hidden>
+      <div class="t-title-wrap">
+        <div id="title" class="t-title"></div>
+        <div id="count" class="t-count"></div>
+      </div>
+      <div class="t-tools">
+        <button id="clearFilters" class="t-chip" hidden></button>
+        <label class="t-search">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="search" type="search" placeholder="Search" autocomplete="off" />
+        </label>
+      </div>
+    </div>
+    <div id="scroller" class="t-scroller" tabindex="0">
+      <div id="sizer" class="t-sizer">
+        <div id="head" class="t-row t-head"></div>
+        <div id="body" class="t-body"></div>
+        <div id="foot" class="t-row t-foot" hidden></div>
+      </div>
+    </div>
+    <div id="status" class="t-status" hidden></div>
+  </div>
+  <div id="popover" class="t-pop" hidden></div>
+</body>
+</html>

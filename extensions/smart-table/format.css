@@ -1,0 +1,79 @@
+/* Format Extension dialog */
+:root {
+  --ink-1: #0b0b0b; --ink-2: #52514e; --ink-3: #898781;
+  --line: #e6e5df; --field: #d6d5cf; --accent: #2a78d6; --bg: #ffffff; --soft: #f7f7f5;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink-1);
+  font: 12px/1.4 "Benton Sans", -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+
+.fx { display: flex; flex-direction: column; height: 100%; }
+.fx-top { padding: 14px 18px 10px; border-bottom: 1px solid var(--line); }
+.fx-top h1 { font-size: 15px; margin: 0; }
+.fx-top p { margin: 2px 0 0; color: var(--ink-3); }
+
+.fx-body { flex: 1; overflow: auto; padding: 4px 18px 12px; }
+section { padding: 12px 0 10px; border-bottom: 1px solid var(--line); }
+section:last-child { border-bottom: 0; }
+h2 { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 0 0 8px; }
+.fx-num { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 14%, white); color: var(--accent); font-size: 10px; font-weight: 700; }
+
+.fx-field { display: block; margin: 8px 0 2px; color: var(--ink-2); font-weight: 500; }
+.fx-field select, .fx-field input[type=text] {
+  display: block; width: 100%; margin-top: 4px; padding: 6px 8px; font: inherit; color: var(--ink-1);
+  border: 1px solid var(--field); border-radius: 6px; background: white; }
+.fx-field select:focus, .fx-field input:focus { outline: 2px solid color-mix(in srgb, var(--accent) 35%, white); border-color: var(--accent); }
+.fx-field input[type=range] { display: block; width: 100%; margin-top: 10px; accent-color: var(--accent); }
+.fx-field[hidden] { display: none; }
+select option:disabled { color: #b5b4ae; }
+
+.fx-hint { margin: 3px 0 6px; color: var(--ink-3); font-size: 11px; }
+.fx-hint:empty { display: none; }
+.fx-hint.warn { color: #9a6200; }
+
+.fx-check { display: flex; align-items: center; gap: 7px; margin: 7px 0; color: var(--ink-1); cursor: pointer; }
+.fx-check input { accent-color: var(--accent); margin: 0; }
+.fx-check small { color: var(--ink-3); }
+.fx-color { display: flex; align-items: center; gap: 8px; margin: 8px 0; color: var(--ink-2); }
+.fx-color input { width: 34px; height: 24px; padding: 0; border: 1px solid var(--field); border-radius: 5px; background: none; cursor: pointer; }
+
+.fx-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+.fx-dep.off { opacity: .45; pointer-events: none; }
+
+.fx-foot { display: flex; align-items: center; gap: 8px; padding: 10px 18px; border-top: 1px solid var(--line); background: var(--soft); }
+.fx-spacer { flex: 1; }
+.fx-btn { font: inherit; padding: 6px 16px; border-radius: 6px; cursor: pointer; }
+.fx-btn.primary { background: var(--accent); border: 1px solid var(--accent); color: white; font-weight: 600; }
+.fx-btn.ghost { background: white; border: 1px solid var(--field); color: var(--ink-2); }
+.fx-color[hidden] { display: none; }
+.fx-color { align-self: end; }
+
+/* ---- Smart Table additions ---- */
+.fx-tabs { display: flex; gap: 4px; margin-top: 10px; }
+.fx-tabs button { font: inherit; border: 1px solid var(--field); background: white; color: var(--ink-2); padding: 5px 12px; border-radius: 999px; cursor: pointer; }
+.fx-tabs button.on { background: var(--accent); border-color: var(--accent); color: white; font-weight: 600; }
+.fx-tab[hidden] { display: none; }
+section h2 { margin-bottom: 4px; }
+.fx-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+.fx-color[hidden] { display: none; }
+.fx-color { align-self: end; }
+
+.rule { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin: 10px 0; background: var(--soft); }
+.rule-head { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: end; }
+.rule .fx-field { margin: 4px 0 0; }
+.rule .row { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: end; margin-top: 6px; }
+.rule .row .fx-field { flex: 1 1 120px; }
+.rule .row .fx-color, .rule .row .fx-check { margin: 4px 0; }
+.rule .x { border: 0; background: none; color: var(--ink-3); font-size: 18px; cursor: pointer; padding: 0 4px 6px; }
+.rule .x:hover { color: #b02a2a; }
+.rule .swatch { display: inline-flex; align-items: center; gap: 4px; }
+.rule .sample { margin-top: 8px; display: flex; gap: 4px; align-items: center; color: var(--ink-3); font-size: 11px; }
+.rule .sample i { width: 34px; height: 12px; border-radius: 3px; display: inline-block; border: 1px solid var(--line); }
+.add { margin-top: 4px; }
+
+.fx-cols { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.2fr) 92px 50px; gap: 6px 8px; align-items: center; margin-top: 8px; }
+.fx-cols .h { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); }
+.fx-cols .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-2); }
+.fx-cols input[type=text], .fx-cols select { width: 100%; font: inherit; padding: 4px 6px; border: 1px solid var(--field); border-radius: 5px; background: white; }
+.fx-cols label { display: flex; align-items: center; gap: 4px; color: var(--ink-2); }

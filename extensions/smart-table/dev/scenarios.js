@@ -1,0 +1,52 @@
+/* Sample data for previewing Smart Table without Tableau (see shared/dev/mock-tableau.js).
+ * dev/preview.html?scenario=customers50k | customers200k | small | detail | empty
+ */
+/* global MockTableau */
+(function () {
+  // deterministic pseudo-random numbers so screenshots are stable
+  function rng (seed) { return () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; }; }
+
+  const FIRST = ['Abdullah', 'Sara', 'Mohammed', 'Noura', 'Faisal', 'Lama', 'Khalid', 'Reem', 'Omar', 'Hessa', 'Yousef', 'Dana', 'Turki', 'Maha', 'Saad', 'Jawaher'];
+  const LAST = ['Al-Qahtani', 'Al-Otaibi', 'Al-Harbi', 'Al-Shehri', 'Al-Ghamdi', 'Al-Zahrani', 'Al-Dosari', 'Al-Mutairi', 'Al-Anazi', 'Al-Subaie'];
+  const CITIES = ['Riyadh', 'Jeddah', 'Dammam', 'Makkah', 'Madinah', 'Khobar', 'Abha', 'Tabuk', 'Buraidah', 'Hail', 'Jazan', 'Najran'];
+  const SEGMENTS = ['Retail', 'Retail', 'Retail', 'Affluent', 'SME', 'Youth'];
+  const STATUS = ['Active', 'Active', 'Active', 'Dormant', 'Unfunded', 'Closed'];
+
+  function customers (M, n, withDetail) {
+    const rnd = rng(42);
+    const columns = ['Customer ID', 'Customer Name', 'City', 'Segment', 'Status', 'DAY(Onboard Date)', 'SUM(Balance)', 'SUM(Transactions)', 'AGG(Balance Growth %)'];
+    const types = ['string', 'string', 'string', 'string', 'string', 'date', 'float', 'int', 'float'];
+    if (withDetail) { columns.push('Risk Score'); types.push('int'); }
+    const data = new Array(n);
+    const start = Date.UTC(2022, 0, 1);
+    for (let i = 0; i < n; i++) {
+      const id = 'C' + String(100000 + i);
+      const name = FIRST[Math.floor(rnd() * FIRST.length)] + ' ' + LAST[Math.floor(rnd() * LAST.length)];
+      const city = CITIES[Math.floor(rnd() * rnd() * CITIES.length)];
+      const seg = SEGMENTS[Math.floor(rnd() * SEGMENTS.length)];
+      const st = STATUS[Math.floor(rnd() * STATUS.length)];
+      const d = new Date(start + Math.floor(rnd() * 1760) * 864e5);
+      const bal = st === 'Unfunded' ? 0 : Math.round(Math.pow(rnd(), 3) * 250000 * 100) / 100;
+      const tx = st === 'Unfunded' ? 0 : Math.floor(rnd() * 140);
+      const g = st === 'Unfunded' ? null : Math.round((rnd() - 0.42) * 1000) / 1000;
+      const row = [
+        M.dv(id, id, id), M.dv(name, name, name), M.dv(city, city, city), M.dv(seg, seg, seg), M.dv(st, st, st),
+        M.dv(M.iso(d), d, M.fmtDay(d)),
+        M.dv(bal, bal, 'SAR ' + bal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })),
+        M.dv(tx, tx, M.fmtInt(tx)),
+        g === null ? M.dv('%null%', null, 'Null') : M.dv(g, g, (g * 100).toFixed(1) + '%')
+      ];
+      if (withDetail) { const r = Math.floor(rnd() * 100); row.push(M.dv(r, r, String(r))); }
+      data[i] = row;
+    }
+    const encodings = columns.slice(0, 9).map((c) => ({ id: 'fields', field: M.field(c) }));
+    if (withDetail) encodings.push({ id: 'detail', field: M.field('Risk Score') });
+    return { columns, types, data, encodings };
+  }
+
+  MockTableau.scenario('customers50k', (M) => customers(M, 50000, false));
+  MockTableau.scenario('customers200k', (M) => customers(M, 200000, false));
+  MockTableau.scenario('small', (M) => customers(M, 40, false));
+  MockTableau.scenario('detail', (M) => customers(M, 5000, true));
+  MockTableau.scenario('empty', () => ({ columns: [], data: [], encodings: [] }));
+})();

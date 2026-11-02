@@ -59,11 +59,16 @@
   const worksheet = {
     name: 'Mock Sheet',
     addEventListener: () => () => {},
-    getSummaryDataReaderAsync: async () => {
+    // Pages like Tableau does. Scenarios may add types: ['string','float','int','date',...] per column.
+    getSummaryDataReaderAsync: async (pageRowCount) => {
       const d = data();
+      const size = pageRowCount || 10000;
+      const pageCount = Math.max(1, Math.ceil(d.data.length / size));
+      const columns = d.columns.map((c, i) => ({ fieldName: c, index: i, dataType: d.types ? d.types[i] : undefined }));
       return {
-        pageCount: 1,
-        getPageAsync: async () => ({ columns: d.columns.map((c, i) => ({ fieldName: c, index: i })), data: d.data }),
+        pageCount,
+        totalRowCount: d.data.length,
+        getPageAsync: async (p) => ({ columns, data: d.data.slice(p * size, (p + 1) * size) }),
         releaseAsync: async () => {}
       };
     },

@@ -5,6 +5,7 @@ One GitHub repository, many Tableau **Viz Extensions** (Tableau 2024.2+ on Deskt
 | Extension | Folder | Manifest |
 |---|---|---|
 | Smooth Trend | `extensions/smooth-trend/` | `manifests/SmoothTrend.trex` |
+| Smart Table | `extensions/smart-table/` | `manifests/SmartTable.trex` |
 
 (The live list is on the landing page: `https://<github-user>.github.io/tableau-extensions/`.)
 

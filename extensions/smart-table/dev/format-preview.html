@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base href="../" />
+  <!-- GENERATED preview (tools/build.py): sample data instead of Tableau -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Format Smart Table (preview)</title>
+  <link rel="stylesheet" href="./format.css" />
+  <script>window.tableau = window.parent.__mockDialogTableau;</script>
+  <script src="./rules.js"></script>
+  <script src="./format.js" defer></script>
+</head>
+<body>
+  <form id="form" class="fx" autocomplete="off">
+    <header class="fx-top">
+      <h1>Format Smart Table</h1>
+      <p>Changes preview live on the sheet.</p>
+      <nav class="fx-tabs" id="tabs">
+        <button type="button" data-tab="table" class="on">Table</button>
+        <button type="button" data-tab="colors">Conditional colors</button>
+        <button type="button" data-tab="columns">Columns</button>
+      </nav>
+    </header>
+
+    <main class="fx-body">
+      <!-- TABLE -->
+      <div class="fx-tab" data-pane="table">
+        <section>
+          <h2>Header bar</h2>
+          <label class="fx-check"><input type="checkbox" name="showToolbar" /> Show title, row count and filters bar</label>
+          <label class="fx-field">Title <input type="text" name="title" placeholder="No title" /></label>
+          <label class="fx-check"><input type="checkbox" name="showSearch" /> Search box</label>
+        </section>
+        <section>
+          <h2>Layout</h2>
+          <div class="fx-grid">
+            <label class="fx-field">Row height
+              <select name="density">
+                <option value="compact">Compact</option>
+                <option value="normal">Normal</option>
+                <option value="comfortable">Comfortable</option>
+              </select>
+            </label>
+            <label class="fx-field">Font size
+              <select name="fontSize">
+                <option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="16">16</option>
+              </select>
+            </label>
+            <label class="fx-field">Lines
+              <select name="gridlines">
+                <option value="rows">Between rows</option>
+                <option value="all">Rows and columns</option>
+                <option value="none">None</option>
+              </select>
+            </label>
+            <label class="fx-field">Freeze first columns
+              <select name="freeze">
+                <option value="0">None</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+              </select>
+            </label>
+            <label class="fx-field">Totals row
+              <select name="totals">
+                <option value="none">None</option>
+                <option value="sum">Sum (averages for %)</option>
+                <option value="avg">Average</option>
+              </select>
+            </label>
+          </div>
+          <div class="fx-grid">
+            <label class="fx-check"><input type="checkbox" name="zebra" /> Striped rows</label>
+            <label class="fx-check"><input type="checkbox" name="rowNumbers" /> Row numbers</label>
+          </div>
+        </section>
+        <section>
+          <h2>Colors</h2>
+          <div class="fx-grid">
+            <label class="fx-color">Header background <input type="color" name="headerBg" /></label>
+            <label class="fx-color">Header text <input type="color" name="headerInk" /></label>
+            <label class="fx-color">Selection <input type="color" name="accent" /></label>
+          </div>
+          <div class="fx-grid">
+            <label class="fx-field">Background
+              <select name="background">
+                <option value="white">White</option>
+                <option value="transparent">Transparent</option>
+                <option value="custom">Custom color</option>
+              </select>
+            </label>
+            <label class="fx-color" id="bgColorField">Color <input type="color" name="bgColor" /></label>
+          </div>
+        </section>
+        <section>
+          <h2>Actions</h2>
+          <label class="fx-check"><input type="checkbox" name="selectToTableau" /> Clicking rows selects them in Tableau</label>
+          <p class="fx-hint">Needed for dashboard actions from this table (Filter / Highlight / Go to URL). Ctrl/⌘-click adds rows, Shift-click selects a range, Esc clears.</p>
+        </section>
+      </div>
+
+      <!-- CONDITIONAL COLORS -->
+      <div class="fx-tab" data-pane="colors" hidden>
+        <p class="fx-hint">Rules run top to bottom; a later rule wins when two color the same cell.</p>
+        <div id="rules"></div>
+        <button type="button" id="addRule" class="fx-btn ghost add">+ Add rule</button>
+      </div>
+
+      <!-- COLUMNS -->
+      <div class="fx-tab" data-pane="columns" hidden>
+        <p class="fx-hint">Rename, align or hide columns. Change the order by dragging pills on the Fields shelf in Tableau. Drag a column edge in the table to change its width.</p>
+        <div id="columns" class="fx-cols"></div>
+      </div>
+    </main>
+
+    <footer class="fx-foot">
+      <button type="button" id="reset" class="fx-btn ghost">Reset to defaults</button>
+      <span class="fx-spacer"></span>
+      <button type="button" id="cancel" class="fx-btn ghost">Cancel</button>
+      <button type="button" id="ok" class="fx-btn primary">OK</button>
+    </footer>
+  </form>
+</body>
+</html>

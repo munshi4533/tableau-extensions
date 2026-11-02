@@ -1,5 +1,14 @@
 [
   {
+    "id": "smart-table",
+    "name": "Smart Table",
+    "version": "1.0.0",
+    "description": "Fast flat table for large data (virtual scrolling): sort and filter any column, search, conditional colors, totals, and row selection that drives dashboard actions.",
+    "manifestName": "SmartTable",
+    "trex": "manifests/SmartTable.trex",
+    "preview": "extensions/smart-table/dev/preview.html"
+  },
+  {
     "id": "smooth-trend",
     "name": "Smooth Trend",
     "version": "1.3.0",
