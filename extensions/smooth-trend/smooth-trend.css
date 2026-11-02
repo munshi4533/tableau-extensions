@@ -39,13 +39,13 @@ html, body {
 .st-icon:empty { display: none; }
 .st-icon svg { width: 20px; height: 20px; }
 .st-titles { min-width: 0; }
-.st-title { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.st-subtitle { font-size: 11px; color: var(--ink-3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-title { font-size: var(--title-size, 14px); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-subtitle { font-size: var(--legend-size, 11px); color: var(--ink-3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .st-kpi { text-align: right; flex: none; }
 .st-kpi-label { font-size: 10px; color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 1px; white-space: nowrap; }
 .st-kpi-label:empty { display: none; }
-.st-kpi-value { font-size: 20px; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.st-kpi-value { font-size: var(--kpi-size, 20px); font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .st-kpi-delta { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-top: 3px; }
 .st-pill {
   display: inline-flex; align-items: center; gap: 3px;
@@ -61,10 +61,10 @@ html, body {
 /* Narrow sheets: hide caption, then subtitle */
 @media (max-width: 420px) { .st-pill-caption { display: none; } }
 @media (max-width: 340px) { .st-icon { display: none; } }
-@media (max-width: 320px) { .st-subtitle { display: none; } .st-kpi-value { font-size: 16px; } }
+@media (max-width: 320px) { .st-subtitle { display: none; } }
 
 /* ---------- Legend ---------- */
-.st-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 0 0 6px; color: var(--ink-2); font-size: 11px; }
+.st-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 0 0 6px; color: var(--ink-2); font-size: var(--legend-size, 11px); }
 .st-legend[hidden] { display: none; }
 .st-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .st-legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
@@ -72,15 +72,16 @@ html, body {
 /* ---------- Chart ---------- */
 .st-chart { position: relative; flex: 1 1 auto; min-height: 60px; }
 .st-chart svg { display: block; overflow: visible; }
-.st-chart .tick text { fill: var(--ink-3); font-size: 10px; font-family: inherit; }
+.st-chart .tick text { fill: var(--ink-3); font-size: var(--y-size, 10px); font-family: inherit; }
+.st-chart .st-xaxis .tick text { font-size: var(--x-size, 10px); }
 .st-chart .tick line { stroke: var(--grid); }
 .st-chart .domain { stroke: var(--axis); }
 .st-chart .st-line { fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .st-chart .st-crosshair { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 3; pointer-events: none; }
 .st-chart .st-hover-dot { stroke: var(--halo); stroke-width: 2; pointer-events: none; }
-.st-chart .st-annot { font-size: 10px; fill: var(--ink-2); font-weight: 600; paint-order: stroke; stroke: var(--halo); stroke-width: 3px; }
+.st-chart .st-annot { font-size: var(--label-size, 10px); fill: var(--ink-2); font-weight: 600; paint-order: stroke; stroke: var(--halo); stroke-width: 3px; }
 .st-chart .st-vlabel { font-weight: 500; fill: var(--ink-2); }
-.st-chart .st-endlabel { font-size: 10px; fill: var(--ink-2); paint-order: stroke; stroke: var(--halo); stroke-width: 3px; }
+.st-chart .st-endlabel { font-size: var(--label-size, 10px); fill: var(--ink-2); paint-order: stroke; stroke: var(--halo); stroke-width: 3px; }
 .st-chart .st-overlay { fill: transparent; cursor: crosshair; }
 
 .st-empty {

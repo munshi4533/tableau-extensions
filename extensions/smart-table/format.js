@@ -23,6 +23,7 @@
     original = tableau.extensions.settings.get('config') || null;
     let saved = {};
     try { saved = original ? JSON.parse(original) : {}; } catch (e) { saved = {}; }
+    if (saved.fontSize && saved.valueSize === undefined) { saved.valueSize = saved.fontSize; saved.headerSize = saved.fontSize; } // v1.2 had one size
     cfg = { ...DEFAULTS, ...saved };
     cfg.columns = { ...(cfg.columns || {}) };
     cfg.rules = Array.isArray(cfg.rules) ? cfg.rules.map((r) => ({ ...r })) : [];
@@ -37,7 +38,7 @@
       const el = e.target;
       if (el.name && el.name in DEFAULTS && !el.closest('#rules') && !el.closest('#columns')) {
         cfg[el.name] = el.type === 'checkbox' ? el.checked : el.value;
-        if (['freeze', 'fontSize', 'titleSize', 'headerHeight'].includes(el.name)) cfg[el.name] = +el.value || 0;
+        if (['freeze', 'fontSize', 'valueSize', 'headerSize', 'titleSize', 'headerHeight'].includes(el.name)) cfg[el.name] = +el.value || 0;
         refresh();
         scheduleSave();
       }

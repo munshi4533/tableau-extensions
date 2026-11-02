@@ -30,6 +30,12 @@
     lineWidth: 2.5,
     showArea: true,
     showPoints: false,
+    titleSize: 14,
+    kpiSize: 20,
+    labelSize: 10, // value labels and line-end names
+    xAxisSize: 10, // date / dimension axis
+    yAxisSize: 10, // value axis
+    legendSize: 11, // legend and subtitle
     valueLabels: 'minmax', // none | minmax | minmaxlast | all
     labelNumbers: 'short', // short | tableau
     showGrid: false, // horizontal gridlines behind the line
@@ -450,7 +456,10 @@
     const root = document.documentElement.style;
     root.setProperty('--surface', bg);
     root.setProperty('--halo', bg);
+    for (const [v, k, d] of [['--title-size', 'titleSize', 14], ['--kpi-size', 'kpiSize', 20], ['--label-size', 'labelSize', 10],
+      ['--x-size', 'xAxisSize', 10], ['--y-size', 'yAxisSize', 10], ['--legend-size', 'legendSize', 11]]) root.setProperty(v, size(k, d) + 'px');
   }
+  const size = (k, d) => +cfg[k] || d;
 
   function renderHeader (tiny) {
     const header = $('header');
@@ -649,11 +658,12 @@
     const yTicksN = Math.max(2, Math.floor(H / 48));
     const yTmp = d3.scaleLinear().domain([y0, y1]).nice(yTicksN);
     const tickLabels = yTmp.ticks(yTicksN).map((v) => fmtNum(v, null, true));
-    const maxTickW = d3.max(tickLabels, (s) => s.length) * 6.2;
+    const ys = size('yAxisSize', 10); const xs = size('xAxisSize', 10); const ls = size('labelSize', 10);
+    const maxTickW = d3.max(tickLabels, (s) => s.length) * 0.62 * ys;
 
     const endLabels = !single && series.length <= 4;
-    const endW = endLabels ? Math.min(110, d3.max(series, (s) => s.name.length) * 5.8 + 12) : 0;
-    const m = { top: 16, right: Math.max(14, endW), bottom: 24, left: Math.ceil(maxTickW) + 10 };
+    const endW = endLabels ? Math.min(11 * ls, d3.max(series, (s) => s.name.length) * 0.58 * ls + 12) : 0;
+    const m = { top: Math.max(16, ls + 6), right: Math.max(14, endW), bottom: xs + 14, left: Math.ceil(maxTickW) + 10 };
     const iw = Math.max(10, W - m.left - m.right);
     const ih = Math.max(10, H - m.top - m.bottom);
 
@@ -682,7 +692,7 @@
     else if (xType === 'number') xAxis.ticks(Math.max(2, Math.floor(iw / 70))).tickFormat(d3.format('~g'));
     else {
       const maxLen = d3.max(keys, (k) => String(k).length) || 1;
-      const fit = Math.max(1, Math.floor(iw / (maxLen * 6.2 + 14)));
+      const fit = Math.max(1, Math.floor(iw / (maxLen * 0.62 * xs + 14)));
       const step = Math.ceil(keys.length / fit);
       xAxis.tickValues(keys.filter((_, i) => i % step === 0));
     }
@@ -818,7 +828,8 @@
     const mode = cfg.valueLabels || 'minmax';
     if (mode === 'none') return;
     const ctx = document.createElement('canvas').getContext('2d');
-    ctx.font = `600 10px ${getComputedStyle(document.body).fontFamily}`;
+    const ls = size('labelSize', 10);
+    ctx.font = `600 ${ls}px ${getComputedStyle(document.body).fontFamily}`;
     const placed = (obstacles || []).slice();
     const hit = (r) => placed.some((q) => r.x0 < q.x1 && r.x1 > q.x0 && r.y0 < q.y1 && r.y1 > q.y0);
 
@@ -863,7 +874,7 @@
     });
     cands.sort((a, b) => a.prio - b.prio);
 
-    const H = 12; const GAP = 6;
+    const H = ls + 2; const GAP = 6;
     const gLabels = plot.append('g').attr('class', 'st-labels');
     const xMin = 0; const xMax = iw + m.right - 2; // stay clear of the y-axis labels on the left
     for (const c of cands) {
@@ -905,11 +916,13 @@
       const lp = s.points[s.points.length - 1];
       return lp ? { s, x: px(lp) + 8, y: y(lp.y) } : null;
     }).filter(Boolean).sort((a, b) => a.y - b.y);
-    for (let i = 1; i < items.length; i++) if (items[i].y - items[i - 1].y < 12) items[i].y = items[i - 1].y + 12;
+    const gap = size('labelSize', 10) + 2;
+    for (let i = 1; i < items.length; i++) if (items[i].y - items[i - 1].y < gap) items[i].y = items[i - 1].y + gap;
     items.forEach((it) => {
       plot.append('text').attr('class', 'st-endlabel').attr('x', it.x).attr('y', it.y).attr('dy', '0.32em').text(it.s.name);
     });
-    return items.map((it) => ({ x0: it.x - 2, x1: it.x + it.s.name.length * 6 + 4, y0: it.y - 7, y1: it.y + 7 })); // obstacles for value labels
+    const ls = size('labelSize', 10);
+    return items.map((it) => ({ x0: it.x - 2, x1: it.x + it.s.name.length * 0.62 * ls + 4, y0: it.y - ls * 0.7, y1: it.y + ls * 0.7 })); // obstacles for value labels
   }
 
   // ---------------------------------------------------------------- hover, tooltip & selection

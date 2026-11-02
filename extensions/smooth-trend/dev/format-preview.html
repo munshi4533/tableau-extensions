@@ -4,12 +4,12 @@
   <base href="../" />
   <!-- GENERATED preview (tools/build.py): sample data instead of Tableau -->
   <meta charset="utf-8" />
-  <meta name="ext-version" content="1.4.0" />
+  <meta name="ext-version" content="1.5.0" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Format Smooth Trend (preview)</title>
-  <link rel="stylesheet" href="./format.css?v=1.4.0" />
+  <link rel="stylesheet" href="./format.css?v=1.5.0" />
   <script>window.tableau = window.parent.__mockDialogTableau;</script>
-  <script src="./format.js?v=1.4.0" defer></script>
+  <script src="./format.js?v=1.5.0" defer></script>
 </head>
 <body>
   <form id="form" class="fx" autocomplete="off">
@@ -122,9 +122,34 @@
         </div>
       </section>
 
-      <!-- 4. Growth -->
+      <!-- 4. Text sizes -->
       <section>
-        <h2><span class="fx-num">4</span>Growth &amp; degrowth</h2>
+        <h2><span class="fx-num">4</span>Text sizes</h2>
+        <div class="fx-grid">
+            <label class="fx-field">Title
+              <select name="titleSize"><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="16">16</option><option value="18">18</option><option value="20">20</option><option value="24">24</option></select>
+            </label>
+            <label class="fx-field">Headline number
+              <select name="kpiSize"><option value="14">14</option><option value="16">16</option><option value="18">18</option><option value="20">20</option><option value="24">24</option><option value="28">28</option><option value="32">32</option><option value="40">40</option></select>
+            </label>
+            <label class="fx-field">Value labels
+              <select name="labelSize"><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="16">16</option></select>
+            </label>
+            <label class="fx-field">Date axis (dimension)
+              <select name="xAxisSize"><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="16">16</option></select>
+            </label>
+            <label class="fx-field">Value axis
+              <select name="yAxisSize"><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="16">16</option></select>
+            </label>
+            <label class="fx-field">Legend &amp; subtitle
+              <select name="legendSize"><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="16">16</option></select>
+            </label>
+        </div>
+      </section>
+
+      <!-- 5. Growth -->
+      <section>
+        <h2><span class="fx-num">5</span>Growth &amp; degrowth</h2>
         <label class="fx-check"><input type="checkbox" name="higherIsBetter" /> Higher is better</label>
         <p class="fx-hint">Untick for cost, churn, complaints… so going up shows as bad (red).</p>
         <label class="fx-check"><input type="checkbox" name="colorByGrowth" /> Color the line by growth <small>(single line)</small></label>
@@ -134,9 +159,9 @@
         </div>
       </section>
 
-      <!-- 5. Line -->
+      <!-- 6. Line -->
       <section>
-        <h2><span class="fx-num">5</span>Line</h2>
+        <h2><span class="fx-num">6</span>Line</h2>
         <div class="fx-grid">
           <label class="fx-field">Curve
             <select name="curve">
@@ -189,9 +214,9 @@
         </div>
       </section>
 
-      <!-- 6. Tooltip -->
+      <!-- 7. Tooltip -->
       <section>
-        <h2><span class="fx-num">6</span>Tooltip</h2>
+        <h2><span class="fx-num">7</span>Tooltip</h2>
         <label class="fx-field">Style
           <select name="tooltipMode">
             <option value="custom">Smart tooltip (value + growth)</option>

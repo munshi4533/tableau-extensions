@@ -22,7 +22,9 @@
     showDownload: true,
     initialRows: '500', // rows loaded first: '100' | '500' | '1000' | '5000' | 'all'
     density: 'normal', // compact | normal | comfortable
-    fontSize: 12,
+    fontSize: 12, // text (dimension) cells
+    valueSize: 12, // number (measure) cells and totals
+    headerSize: 12, // column headers
     zebra: true,
     gridlines: 'rows', // none | rows | all
     headerBg: '#f4f4f1',
@@ -244,6 +246,7 @@
   function loadSettings () {
     let saved = {};
     try { const raw = tableau.extensions.settings.get('config'); if (raw) saved = JSON.parse(raw); } catch (e) { /* none */ }
+    if (saved.fontSize && saved.valueSize === undefined) { saved.valueSize = saved.fontSize; saved.headerSize = saved.fontSize; } // v1.2 had one size
     cfg = { ...DEFAULTS, ...saved };
     cfg.columns = cfg.columns || {};
     cfg.rules = Array.isArray(cfg.rules) ? cfg.rules : [];
@@ -251,9 +254,12 @@
 
   function applySettings (dataChanged) {
     const root = document.documentElement.style;
-    rowH = ROW_H[cfg.density] || 28;
+    // rows grow with the larger of the two cell text sizes
+    rowH = Math.max(ROW_H[cfg.density] || 28, Math.ceil(Math.max(+cfg.fontSize || 12, +cfg.valueSize || 12) * 1.45 + 8));
     root.setProperty('--row-h', rowH + 'px');
     root.setProperty('--font', (+cfg.fontSize || 12) + 'px');
+    root.setProperty('--val-size', (+cfg.valueSize || +cfg.fontSize || 12) + 'px');
+    root.setProperty('--head-size', (+cfg.headerSize || +cfg.fontSize || 12) + 'px');
     root.setProperty('--head-bg', cfg.headerBg);
     root.setProperty('--head-ink', cfg.headerInk);
     root.setProperty('--title-size', (+cfg.titleSize || 16) + 'px');
@@ -279,7 +285,10 @@
 
   function layout () {
     const visible = shown.filter((c) => !(cfg.columns[c.key] || {}).hidden);
-    const font = `${+cfg.fontSize || 12}px ${getComputedStyle(document.body).fontFamily}`; // measure with the real font
+    const fam = getComputedStyle(document.body).fontFamily; // measure with the real font
+    const font = `${+cfg.fontSize || 12}px ${fam}`;
+    const valFont = `${+cfg.valueSize || +cfg.fontSize || 12}px ${fam}`;
+    const headFont = `${+cfg.headerSize || +cfg.fontSize || 12}px ${fam}`;
     const ctx = document.createElement('canvas').getContext('2d');
     widths = []; lefts = [];
     let x = 0;
@@ -291,20 +300,20 @@
       c.align = cc.align && cc.align !== 'auto' ? cc.align : (c.num && c.type === 'number' ? 'right' : 'left');
       let w = +cc.width;
       if (!w) {
-        ctx.font = '600 ' + font;
+        ctx.font = '600 ' + headFont;
         const labelW = ctx.measureText(c.label).width;
         if (String(cfg.headerLines) === '1') w = labelW + 44; // label + sort/filter icons on one line
         else { // long headers wrap: only the longest word must fit, the rest goes to the next lines
           const word = Math.max(...c.label.split(/\s+/).map((t) => ctx.measureText(t).width));
           w = Math.max(word + 44, Math.min(labelW + 44, 150));
         }
-        ctx.font = font;
+        ctx.font = c.type === 'number' ? valFont : font;
         const step = Math.max(1, Math.floor(N / 400));
         const k = c.num ? 1.13 : 1.02; // the table uses tabular (wider) digits; canvas measures proportional ones
         for (let i = 0; i < N; i += step) { const tw = ctx.measureText(c.txt[i] || '').width * k + 20; if (tw > w) w = tw; }
         if (cfg.totals !== 'none' && c.type === 'number' && c.num) { // leave room for the total
           let t = 0; for (let i = 0; i < N; i++) { const v = c.num[i]; if (v === v) t += Math.abs(v); }
-          ctx.font = '600 ' + font;
+          ctx.font = '600 ' + valFont;
           w = Math.max(w, ctx.measureText(fmtNum(c.unit.pct ? 1 : t, c.unit)).width * k + 24);
         }
         w = Math.min(Math.max(Math.ceil(w), 64), 360);
@@ -501,7 +510,7 @@
   function cellClass (lc, i) {
     let cls = 't-cell';
     if (lc.rn) cls += ' rn';
-    else cls += ' ' + lc.col.align;
+    else cls += ' ' + lc.col.align + (lc.col.type === 'number' ? ' num' : '');
     if (i < layout.frozen) cls += ' frozen' + (i === layout.frozen - 1 ? ' frozen-last' : '');
     return cls;
   }

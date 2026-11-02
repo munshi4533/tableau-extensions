@@ -148,3 +148,7 @@ body .t-root .t-body .t-row.sel { background-image: linear-gradient(var(--sel), 
 .t-head:hover .t-head-rz::after { opacity: .55; } /* grip shows when you hover the header */
 .t-head-rz:hover { background: color-mix(in srgb, var(--accent) 25%, transparent); }
 .t-head-rz:hover::after { opacity: 1; background: var(--accent); }
+
+/* ---------- text sizes (Format → Table → Text sizes) ---------- */
+.t-body .t-cell.num, .t-foot .t-cell.num { font-size: var(--val-size, var(--font)); }
+.t-head .t-cell { font-size: var(--head-size, var(--font)); }
