@@ -79,6 +79,7 @@ html, body {
 .st-chart .st-crosshair { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 3; pointer-events: none; }
 .st-chart .st-hover-dot { stroke: var(--halo); stroke-width: 2; pointer-events: none; }
 .st-chart .st-annot { font-size: 10px; fill: var(--ink-2); font-weight: 600; paint-order: stroke; stroke: var(--halo); stroke-width: 3px; }
+.st-chart .st-vlabel { font-weight: 500; fill: var(--ink-2); }
 .st-chart .st-endlabel { font-size: 10px; fill: var(--ink-2); paint-order: stroke; stroke: var(--halo); stroke-width: 3px; }
 .st-chart .st-overlay { fill: transparent; cursor: crosshair; }
 

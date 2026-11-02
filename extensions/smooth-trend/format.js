@@ -26,6 +26,7 @@
     let saved = {};
     try { saved = original ? JSON.parse(original) : {}; } catch (e) { saved = {}; }
     if (saved.compareMode && !saved.kpiCompare) saved.kpiCompare = saved.compareMode;
+    if (saved.showMinMax === false && !saved.valueLabels) saved.valueLabels = 'none';
     cfg = { ...DEFAULTS, ...saved };
 
     fill();

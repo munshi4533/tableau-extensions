@@ -4,12 +4,12 @@
   <base href="../" />
   <!-- GENERATED preview (tools/build.py): sample data instead of Tableau -->
   <meta charset="utf-8" />
-  <meta name="ext-version" content="1.3.1" />
+  <meta name="ext-version" content="1.4.0" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Format Smooth Trend (preview)</title>
-  <link rel="stylesheet" href="./format.css?v=1.3.1" />
+  <link rel="stylesheet" href="./format.css?v=1.4.0" />
   <script>window.tableau = window.parent.__mockDialogTableau;</script>
-  <script src="./format.js?v=1.3.1" defer></script>
+  <script src="./format.js?v=1.4.0" defer></script>
 </head>
 <body>
   <form id="form" class="fx" autocomplete="off">
@@ -152,8 +152,24 @@
         </div>
         <label class="fx-color">Line color <input type="color" name="lineColor" /></label>
         <div class="fx-grid">
+          <label class="fx-field">Value labels
+            <select name="valueLabels">
+              <option value="none">None</option>
+              <option value="minmax">High &amp; low</option>
+              <option value="minmaxlast">High, low &amp; latest</option>
+              <option value="all">All values</option>
+            </select>
+          </label>
+          <label class="fx-field">Label numbers
+            <select name="labelNumbers">
+              <option value="short">Short (2.4M)</option>
+              <option value="tableau">As formatted in Tableau</option>
+            </select>
+          </label>
+        </div>
+        <p class="fx-hint" id="hintLabels">Labels never overlap: when there isn't room, a label moves to the other side of the line or is skipped. Hover still shows every value.</p>
+        <div class="fx-grid">
           <label class="fx-check"><input type="checkbox" name="showArea" /> Gradient area</label>
-          <label class="fx-check"><input type="checkbox" name="showMinMax" /> High &amp; low labels</label>
           <label class="fx-check"><input type="checkbox" name="showPoints" /> All points</label>
           <label class="fx-check"><input type="checkbox" name="showGrid" /> Gridlines</label>
         </div>

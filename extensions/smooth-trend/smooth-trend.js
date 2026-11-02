@@ -30,7 +30,8 @@
     lineWidth: 2.5,
     showArea: true,
     showPoints: false,
-    showMinMax: true,
+    valueLabels: 'minmax', // none | minmax | minmaxlast | all
+    labelNumbers: 'short', // short | tableau
     showGrid: false, // horizontal gridlines behind the line
     background: 'transparent', // transparent | white | custom
     bgColor: '#ffffff',
@@ -696,6 +697,7 @@
     const lw = +cfg.lineWidth || 2.5;
     const plot = g.append('g').attr('class', 'st-plot');
     const animate = cfg.animate && !hasAnimated;
+    let endRects = [];
 
     const gradient = (id, color) => {
       const lg = defs.append('linearGradient').attr('id', id).attr('x1', 0).attr('x2', 0).attr('y1', 0).attr('y2', 1);
@@ -743,7 +745,6 @@
           .attr('stroke', 'var(--halo)').attr('stroke-width', 1.5);
       }
 
-      if (cfg.showMinMax && pts.length > 2) drawMinMax(plot, pts, px, y, iw);
 
       // Last point emphasis
       const lp = pts[pts.length - 1];
@@ -763,8 +764,10 @@
         const lp = s.points[s.points.length - 1];
         if (lp) plot.append('circle').attr('cx', px(lp)).attr('cy', y(lp.y)).attr('r', lw + 1.5).attr('fill', s.color).attr('stroke', 'var(--halo)').attr('stroke-width', 2);
       });
-      if (endLabels) drawEndLabels(plot, series, px, y);
+      if (endLabels) endRects = drawEndLabels(plot, series, px, y);
     }
+
+    drawValueLabels(plot, series, px, y, iw, ih, single, endRects, m);
 
     if (animate) {
       plot.selectAll('.st-line').each(function () {
@@ -807,18 +810,94 @@
     });
   }
 
-  function drawMinMax (plot, pts, px, y, iw) {
-    let hi = 0; let lo = 0;
-    pts.forEach((p, i) => { if (p.y > pts[hi].y) hi = i; if (p.y < pts[lo].y) lo = i; });
-    if (hi === lo) return;
-    [[hi, 'High', -9], [lo, 'Low', 15]].forEach(([i, label, dy]) => {
-      const p = pts[i];
-      const cx = px(p); const cy = y(p.y);
-      plot.append('circle').attr('cx', cx).attr('cy', cy).attr('r', 3).attr('fill', 'var(--surface)').attr('stroke', 'var(--ink-2)').attr('stroke-width', 1.5);
-      const anchor = cx < 40 ? 'start' : cx > iw - 40 ? 'end' : 'middle';
-      plot.append('text').attr('class', 'st-annot').attr('x', cx).attr('y', cy + dy).attr('text-anchor', anchor)
-        .text(`${label} ${p.yLabel || fmtNum(p.y, null, true)}`);
+  // ---------------------------------------------------------------- value labels (collision-free)
+  // Places labels greedily by importance (high/low first, then latest, then the most prominent points).
+  // Each label tries its preferred side of the line, then the other side; if both collide with an
+  // already placed label, the line, or the chart edge, it is skipped. Hover still shows every value.
+  function drawValueLabels (plot, series, px, y, iw, ih, single, obstacles, m) {
+    const mode = cfg.valueLabels || 'minmax';
+    if (mode === 'none') return;
+    const ctx = document.createElement('canvas').getContext('2d');
+    ctx.font = `600 10px ${getComputedStyle(document.body).fontFamily}`;
+    const placed = (obstacles || []).slice();
+    const hit = (r) => placed.some((q) => r.x0 < q.x1 && r.x1 > q.x0 && r.y0 < q.y1 && r.y1 > q.y0);
+
+    // the drawn lines as polylines in pixels, to keep labels off them
+    const lines = series.map((s) => s.points.map((p) => [px(p), y(p.y)]));
+    // exact test: does any line segment pass through the label box (with 1px padding)?
+    const crossesLine = (r) => lines.some((pl) => {
+      if (pl.length < 2) return false;
+      let k = Math.max(1, d3.bisector((d) => d[0]).left(pl, r.x0));
+      for (; k < pl.length; k++) {
+        const [xa, ya] = pl[k - 1]; const [xb, yb] = pl[k];
+        if (xa > r.x1) break;
+        const lo = Math.max(xa, r.x0); const hi = Math.min(xb, r.x1);
+        if (lo > hi) continue;
+        const at = (x) => (xb === xa ? ya : ya + (yb - ya) * (x - xa) / (xb - xa));
+        const y1 = at(lo); const y2 = at(hi);
+        if (Math.max(y1, y2) > r.y0 - 1 && Math.min(y1, y2) < r.y1 + 1) return true;
+      }
+      return false;
     });
+
+    const cands = [];
+    series.forEach((s, si) => {
+      const pts = s.points;
+      const n = pts.length;
+      if (!n) return;
+      let hi = 0; let lo = 0;
+      pts.forEach((p, i) => { if (p.y > pts[hi].y) hi = i; if (p.y < pts[lo].y) lo = i; });
+      const range = (pts[hi].y - pts[lo].y) || 1;
+      pts.forEach((p, i) => {
+        const isHi = n > 2 && i === hi; const isLo = n > 2 && i === lo && lo !== hi; const isLast = i === n - 1;
+        const want = mode === 'all' || ((mode === 'minmax' || mode === 'minmaxlast') && (isHi || isLo)) || (mode === 'minmaxlast' && isLast);
+        if (!want) return;
+        const prev = i > 0 ? pts[i - 1].y : p.y; const next = i < n - 1 ? pts[i + 1].y : p.y;
+        const prominence = Math.abs(p.y - (prev + next) / 2) / range;
+        const above = isHi ? true : isLo ? false : p.y >= (prev + next) / 2;
+        const tag = single && mode !== 'all' ? (isHi ? 'High ' : isLo ? 'Low ' : '') : '';
+        const value = cfg.labelNumbers === 'tableau' && p.yLabel ? p.yLabel : fmtNum(p.y, null, true);
+        const prio = (isHi || isLo ? 0 : isLast ? 1 : 2) + (1 - Math.min(1, prominence)) + si * 0.001;
+        cands.push({ p, s, isExtreme: isHi || isLo, above, text: tag + value, prio });
+      });
+    });
+    cands.sort((a, b) => a.prio - b.prio);
+
+    const H = 12; const GAP = 6;
+    const gLabels = plot.append('g').attr('class', 'st-labels');
+    const xMin = 0; const xMax = iw + m.right - 2; // stay clear of the y-axis labels on the left
+    for (const c of cands) {
+      const cx = px(c.p); const cy = y(c.p.y);
+      const w = ctx.measureText(c.text).width + 4;
+      // candidate spots: preferred side first (centered, then right, then left of the point), then the other side
+      const sides = c.above ? ['above', 'below'] : ['below', 'above'];
+      const spots = [];
+      for (const side of sides) for (const hx of ['mid', 'right', 'left']) spots.push([side, hx]);
+      for (const [side, hx] of spots) {
+        let x0 = hx === 'mid' ? cx - w / 2 : hx === 'right' ? cx + 3 : cx - w - 3;
+        x0 = Math.max(xMin, Math.min(x0, xMax - w));
+        const top = side === 'above' ? cy - GAP - H : cy + GAP;
+        const r = { x0, x1: x0 + w, y0: top, y1: top + H };
+        if (r.y0 < -m.top + 2 || r.y1 > ih - 2) continue;
+        if (hit(r) || crossesLine(r)) continue;
+        placed.push(r);
+        // small marker so each label clearly belongs to its point (colored like the line there)
+        if (!cfg.showPoints) {
+          const ext = c.isExtreme && mode !== 'all';
+          let fill = single ? cfg.lineColor : c.s.color;
+          if (single && cfg.colorByGrowth && iw / c.s.points.length >= 6) { // same rule as the line coloring
+            const j = c.s.points.indexOf(c.p);
+            if (j > 0) fill = toneColor(change(c.p.y, c.s.points[j - 1].y).tone);
+          }
+          gLabels.append('circle').attr('cx', cx).attr('cy', cy).attr('r', ext ? 3 : 2.5)
+            .attr('fill', ext ? 'var(--surface)' : fill)
+            .attr('stroke', ext ? 'var(--ink-2)' : 'var(--halo)').attr('stroke-width', ext ? 1.5 : 1);
+        }
+        gLabels.append('text').attr('class', c.isExtreme || mode !== 'all' ? 'st-annot' : 'st-annot st-vlabel')
+          .attr('x', x0 + w / 2).attr('y', top + H - 2).attr('text-anchor', 'middle').text(c.text);
+        break;
+      }
+    }
   }
 
   function drawEndLabels (plot, series, px, y) {
@@ -830,6 +909,7 @@
     items.forEach((it) => {
       plot.append('text').attr('class', 'st-endlabel').attr('x', it.x).attr('y', it.y).attr('dy', '0.32em').text(it.s.name);
     });
+    return items.map((it) => ({ x0: it.x - 2, x1: it.x + it.s.name.length * 6 + 4, y0: it.y - 7, y1: it.y + 7 })); // obstacles for value labels
   }
 
   // ---------------------------------------------------------------- hover, tooltip & selection
@@ -960,6 +1040,7 @@
       if (raw) saved = JSON.parse(raw);
     } catch (e) { /* no saved settings */ }
     if (saved.compareMode && !saved.kpiCompare) saved.kpiCompare = saved.compareMode; // v1.0 settings
+    if (saved.showMinMax === false && !saved.valueLabels) saved.valueLabels = 'none'; // v1.3 settings
     cfg = { ...DEFAULTS, ...saved };
   }
 
