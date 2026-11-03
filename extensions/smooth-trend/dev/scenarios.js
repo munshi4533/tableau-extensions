@@ -94,6 +94,19 @@ MockTableau.scenario('overdraft', (M) => {
   return { columns, data, encodings: [{ id: 'date', field: M.field(columns[0]) }, { id: 'value', field: M.field(columns[1]) }] };
 });
 
+MockTableau.scenario('overdraftYear', (M) => {
+  // 306 days, -2.74M stepping down to -3.84M (like the real OD Total sheet)
+  const columns = ['snap_dt', 'SUM(Total Overdrawn Amount (SAR))'];
+  const data = [];
+  let v = -2740000;
+  for (let i = 0; i < 306; i++) {
+    const d = new Date(Date.UTC(2026, 0, 1 + i));
+    v += -3600 + Math.sin(i / 2.3) * 2500 + (i % 40 === 20 ? -120000 : 0);
+    data.push([M.dv(M.iso(d), d, M.fmtDay(d)), M.dv(v, v, v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))]);
+  }
+  return { columns, data, encodings: [{ id: 'date', field: M.field(columns[0]) }, { id: 'value', field: M.field(columns[1]) }] };
+});
+
 MockTableau.scenario('profitloss', (M) => {
   // crosses zero: monthly profit/loss
   const columns = ['MONTH(Date)', 'SUM(Net Profit)'];

@@ -665,7 +665,7 @@
     let [y0, y1] = d3.extent(allY);
     // Start the value axis at zero only when that doesn't squash the line (e.g. not for -3.8M … -3.6M)
     let includeZero = cfg.yAxis === 'zero';
-    if (!cfg.yAxis || cfg.yAxis === 'auto') { const dist = y0 > 0 ? y0 : y1 < 0 ? -y1 : 0; includeZero = dist <= 3 * (y1 - y0); }
+    if (!cfg.yAxis || cfg.yAxis === 'auto') { const dist = y0 > 0 ? y0 : y1 < 0 ? -y1 : 0; includeZero = y1 < 0 ? false : dist <= 1.5 * (y1 - y0); } // all-negative data: always fit
     if (includeZero) { y0 = Math.min(0, y0); y1 = Math.max(0, y1); }
     if (y0 === y1) { y0 -= Math.abs(y0 || 1) * 0.1; y1 += Math.abs(y1 || 1) * 0.1; }
     const pad = (y1 - y0) * 0.06;
@@ -848,6 +848,8 @@
     const ls = size('labelSize', 10);
     ctx.font = `600 ${ls}px ${getComputedStyle(document.body).fontFamily}`;
     const placed = (obstacles || []).slice();
+    const placedX = []; // horizontal spans of placed value labels
+    const dense = series.some((s0) => s0.points.length > 1 && iw / s0.points.length < 24); // e.g. daily data over months
     const hit = (r) => placed.some((q) => r.x0 < q.x1 && r.x1 > q.x0 && r.y0 < q.y1 && r.y1 > q.y0);
 
     // the drawn lines as polylines in pixels, to keep labels off them
@@ -908,6 +910,9 @@
         const r = { x0, x1: x0 + w, y0: top, y1: top + H };
         if (r.y0 < -m.top + 2 || r.y1 > ih - 2) continue;
         if (hit(r) || crossesLine(r)) continue;
+        // "All values" on dense data: keep one label per horizontal slot so labels don't stack above and below each other
+        if (mode === 'all' && dense && !c.isExtreme && placedX.some(([a0, a1]) => r.x0 < a1 + 6 && r.x1 > a0 - 6)) continue;
+        placedX.push([r.x0, r.x1]);
         placed.push(r);
         // small marker so each label clearly belongs to its point (colored like the line there)
         if (!cfg.showPoints) {
