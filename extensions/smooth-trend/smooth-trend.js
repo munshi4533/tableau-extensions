@@ -23,6 +23,7 @@
     dateFormat: 'auto', // auto | tableau | mmm-yyyy | mmmm-yyyy | yyyy-mm | mm/yyyy | dd-mmm-yyyy | quarter | yyyy
     colorByGrowth: true,
     higherIsBetter: true,
+    growthBasis: 'auto', // auto | value | size  (size = ignore the minus sign; auto uses size when every value is negative)
     upColor: '#0ca30c',
     downColor: '#d03b3b',
     curve: 'smooth',
@@ -41,7 +42,7 @@
     showGrid: false, // horizontal gridlines behind the line
     background: 'transparent', // transparent | white | custom
     bgColor: '#ffffff',
-    yZero: true,
+    yAxis: 'auto', // auto | zero | fit  (auto starts at zero unless the data sits far from zero)
     animate: true,
     tooltipMode: 'custom'
   };
@@ -313,6 +314,7 @@
       grain,
       grainMs,
       rawGrain,
+      allNegative: series.every((s0) => s0.points.every((p) => p.y <= 0)) && series.some((s0) => s0.points.some((p) => p.y < 0)),
       kpiShelf,
       valueName: cleanName(valF.name || 'Value'),
       seriesName: serF ? cleanName(serF.name) : null
@@ -420,11 +422,17 @@
     return (a >= 100 ? d3.format(',.0f')(a) : d3.format('.1f')(a)) + '%';
   }
 
+  // Growth by size: for all-negative measures (overdraft, losses…) "growing" means the number gets bigger without its sign
+  function bySize () { return cfg.growthBasis === 'size' || (cfg.growthBasis !== 'value' && !!(model && model.allNegative)); }
   function change (curr, base) {
+    // colors always follow the real value: "Higher is better" on => going up is good (green)
+    const valueDir = curr > base ? 'up' : curr < base ? 'down' : 'flat';
+    const tone = valueDir === 'flat' ? 'flat' : ((valueDir === 'up') === !!cfg.higherIsBetter ? 'good' : 'bad');
+    // arrows and % can follow the size of the number instead (negative measures: -3.8M vs -3.6M is ▲ growth)
+    if (bySize()) { curr = Math.abs(curr); base = Math.abs(base); }
     const delta = curr - base;
     const pct = base !== 0 ? delta / Math.abs(base) : null;
     const dir = delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat';
-    const tone = dir === 'flat' ? 'flat' : ((dir === 'up') === !!cfg.higherIsBetter ? 'good' : 'bad');
     return { delta, pct, dir, tone };
   }
   const arrow = (dir) => (dir === 'up' ? '▲' : dir === 'down' ? '▼' : '■');
@@ -655,11 +663,14 @@
     const { series, keys, xType, single } = model;
     const allY = [].concat(...series.map((s) => s.points.map((p) => p.y)));
     let [y0, y1] = d3.extent(allY);
-    if (cfg.yZero) { y0 = Math.min(0, y0); y1 = Math.max(0, y1); }
+    // Start the value axis at zero only when that doesn't squash the line (e.g. not for -3.8M … -3.6M)
+    let includeZero = cfg.yAxis === 'zero';
+    if (!cfg.yAxis || cfg.yAxis === 'auto') { const dist = y0 > 0 ? y0 : y1 < 0 ? -y1 : 0; includeZero = dist <= 3 * (y1 - y0); }
+    if (includeZero) { y0 = Math.min(0, y0); y1 = Math.max(0, y1); }
     if (y0 === y1) { y0 -= Math.abs(y0 || 1) * 0.1; y1 += Math.abs(y1 || 1) * 0.1; }
     const pad = (y1 - y0) * 0.06;
-    if (!(cfg.yZero && y0 === 0)) y0 -= pad;
-    y1 += pad;
+    if (!(includeZero && y0 === 0)) y0 -= pad;
+    if (!(includeZero && y1 === 0)) y1 += pad; // zero stays the top edge for all-negative data
 
     const yTicksN = Math.max(2, Math.floor(H / 48));
     const yTmp = d3.scaleLinear().domain([y0, y1]).nice(yTicksN);
@@ -708,7 +719,7 @@
     const curve = curveFactory();
     const lineGen = d3.line().curve(curve).x(px).y((p) => y(p.y));
     const [d0, d1] = y.domain();
-    const baseY = y(Math.min(d1, Math.max(d0, 0))); // area sits on zero, or on the axis floor
+    const baseY = includeZero ? y(Math.min(d1, Math.max(d0, 0))) : ih; // area sits on zero, or fills down to the bottom edge
     const areaGen = d3.area().curve(curve).x(px).y0(baseY).y1((p) => y(p.y));
     const lw = +cfg.lineWidth || 2.5;
     const plot = g.append('g').attr('class', 'st-plot');
@@ -734,10 +745,10 @@
 
       if (growth) {
         // Clip copies of the same smooth path into rising/falling x-ranges so the curve stays continuous
-        const goodUp = !!cfg.higherIsBetter;
         const clips = { up: [], down: [] };
         for (let i = 0; i < pts.length - 1; i++) {
-          const dir = pts[i + 1].y > pts[i].y ? 'up' : pts[i + 1].y < pts[i].y ? 'down' : null;
+          const t = change(pts[i + 1].y, pts[i].y).tone;
+          const dir = t === 'good' ? 'up' : t === 'bad' ? 'down' : null; // 'up' clip = good color
           if (!dir) continue;
           const xa = px(pts[i]) - (i === 0 ? lw * 2 : 0.5);
           const xb = px(pts[i + 1]) + (i === pts.length - 2 ? lw * 2 : 0.5);
@@ -748,7 +759,7 @@
           const id = `st-clip-${dir}`;
           const cp = defs.append('clipPath').attr('id', id);
           clips[dir].forEach(([a, b]) => cp.append('rect').attr('x', a).attr('y', -m.top).attr('width', b - a).attr('height', ih + m.top + m.bottom));
-          const color = (dir === 'up') === goodUp ? cfg.upColor : cfg.downColor;
+          const color = dir === 'up' ? cfg.upColor : cfg.downColor;
           const layer = plot.append('g').attr('clip-path', `url(#${id})`);
           layer.append('path').attr('class', 'st-line').attr('d', lineGen(pts)).attr('stroke', color).attr('stroke-width', lw);
         });
@@ -1060,6 +1071,7 @@
     } catch (e) { /* no saved settings */ }
     if (saved.compareMode && !saved.kpiCompare) saved.kpiCompare = saved.compareMode; // v1.0 settings
     if (saved.showMinMax === false && !saved.valueLabels) saved.valueLabels = 'none'; // v1.3 settings
+    if (saved.yZero !== undefined && !saved.yAxis) saved.yAxis = saved.yZero ? 'auto' : 'fit'; // v1.6 settings
     cfg = { ...DEFAULTS, ...saved };
   }
 

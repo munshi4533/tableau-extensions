@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="ext-version" content="1.6.0" />
+  <meta name="ext-version" content="1.7.0" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Format Smooth Trend</title>
-  <link rel="stylesheet" href="./format.css?v=1.6.0" />
-  <script src="../../shared/lib/tableau.extensions.1.latest.min.js?v=1.6.0"></script>
-  <script src="./format.js?v=1.6.0" defer></script>
+  <link rel="stylesheet" href="./format.css?v=1.7.0" />
+  <script src="../../shared/lib/tableau.extensions.1.latest.min.js?v=1.7.0"></script>
+  <script src="./format.js?v=1.7.0" defer></script>
 </head>
 <body>
   <form id="form" class="fx" autocomplete="off">
@@ -150,6 +150,14 @@
         <h2><span class="fx-num">5</span>Growth &amp; degrowth</h2>
         <label class="fx-check"><input type="checkbox" name="higherIsBetter" /> Higher is better</label>
         <p class="fx-hint">Untick for cost, churn, complaints… so going up shows as bad (red).</p>
+        <label class="fx-field">Growth means
+          <select name="growthBasis">
+            <option value="auto">Automatic (by size when all values are negative)</option>
+            <option value="value">The value goes up</option>
+            <option value="size">The number gets bigger (ignore the minus sign)</option>
+          </select>
+        </label>
+        <p class="fx-hint">For negative measures like overdraft, "by size" shows −3.8M vs −3.6M as <b>▲ +5%</b> growth. Colors follow "Higher is better": ticked, a bigger overdraft is red and a shrinking one green; untick to swap.</p>
         <label class="fx-check"><input type="checkbox" name="colorByGrowth" /> Color the line by growth <small>(single line)</small></label>
         <div class="fx-grid">
           <label class="fx-color">Good <input type="color" name="upColor" /></label>
@@ -206,9 +214,16 @@
           </label>
           <label class="fx-color" id="bgColorField">Color <input type="color" name="bgColor" /></label>
         </div>
-        <div class="fx-grid">
-          <label class="fx-check"><input type="checkbox" name="yZero" /> Y axis from zero</label>
           <label class="fx-check"><input type="checkbox" name="animate" /> Draw-in animation</label>
+        </div>
+        <div class="fx-grid">
+          <label class="fx-field">Value axis
+            <select name="yAxis">
+              <option value="auto">Automatic</option>
+              <option value="zero">Always start at zero</option>
+              <option value="fit">Fit to the data</option>
+            </select>
+          </label>
         </div>
       </section>
 

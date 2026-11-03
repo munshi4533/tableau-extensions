@@ -81,4 +81,25 @@ MockTableau.scenario('ordinal', (M) => {
   return { columns, data, encodings: [{ id: 'date', field: M.field(columns[0]) }, { id: 'value', field: M.field(columns[1]) }] };
 });
 
+MockTableau.scenario('overdraft', (M) => {
+  // all-negative daily balance, like an overdraft: -3.67M drifting to -3.84M
+  const columns = ['snap_dt', 'SUM(rtl_od_bal)'];
+  const data = [];
+  let v = -3670000;
+  for (let i = 0; i < 33; i++) {
+    const d = new Date(Date.UTC(2026, 9, 1 + i));
+    v += -5200 - Math.max(0, Math.sin(i / 3)) * 9000 + (i === 25 ? 15000 : 0);
+    data.push([M.dv(M.iso(d), d, M.fmtDay(d)), M.dv(v, v, v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))]);
+  }
+  return { columns, data, encodings: [{ id: 'date', field: M.field(columns[0]) }, { id: 'value', field: M.field(columns[1]) }] };
+});
+
+MockTableau.scenario('profitloss', (M) => {
+  // crosses zero: monthly profit/loss
+  const columns = ['MONTH(Date)', 'SUM(Net Profit)'];
+  const vals = [-420000, -310000, -150000, -60000, 40000, 120000, 90000, 210000, 330000, 280000, 410000, 520000];
+  const data = M.months(12, Date.UTC(2025, 10, 1)).map((d, i) => [M.dv(M.iso(d), d, M.fmtMonth(d)), M.dv(vals[i], vals[i], M.fmtMoney(vals[i]))]);
+  return { columns, data, encodings: [{ id: 'date', field: M.field(columns[0]) }, { id: 'value', field: M.field(columns[1]) }] };
+});
+
 MockTableau.scenario('empty', () => ({ columns: [], data: [], encodings: [] }));
