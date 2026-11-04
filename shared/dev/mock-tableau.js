@@ -73,6 +73,12 @@
       };
     },
     getVisualSpecificationAsync: async () => ({ activeMarksSpecificationIndex: 0, marksSpecifications: [{ encodings: data().encodings }] }),
+    // scenarios may add params: [{ name, value, formatted }]
+    getParametersAsync: async () => (data().params || []).map((p) => ({
+      name: p.name,
+      currentValue: { value: p.value, nativeValue: p.value, formattedValue: p.formatted || String(p.value) },
+      addEventListener: () => () => {}
+    })),
     hoverTupleAsync: async (id) => { window.__lastHover = id; },
     selectTuplesAsync: async (ids) => { window.__lastSelect = ids; console.log('[mock] select', ids); }
   };

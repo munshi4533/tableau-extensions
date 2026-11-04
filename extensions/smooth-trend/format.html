@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="ext-version" content="1.7.1" />
+  <meta name="ext-version" content="1.8.0" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Format Smooth Trend</title>
-  <link rel="stylesheet" href="./format.css?v=1.7.1" />
-  <script src="../../shared/lib/tableau.extensions.1.latest.min.js?v=1.7.1"></script>
-  <script src="./format.js?v=1.7.1" defer></script>
+  <link rel="stylesheet" href="./format.css?v=1.8.0" />
+  <script src="../../shared/lib/tableau.extensions.1.latest.min.js?v=1.8.0"></script>
+  <script src="./format.js?v=1.8.0" defer></script>
 </head>
 <body>
   <form id="form" class="fx" autocomplete="off">
@@ -227,9 +227,17 @@
         </div>
       </section>
 
-      <!-- 7. Tooltip -->
+      <!-- 7. Reference lines -->
       <section>
-        <h2><span class="fx-num">7</span>Tooltip</h2>
+        <h2><span class="fx-num">7</span>Reference lines</h2>
+        <p class="fx-hint">Like Tableau's reference lines: a fixed number, a calculation (average, median…), a measure you drop on <b>Detail</b> (or Tooltip) on the Marks card, or a parameter.</p>
+        <div id="refs"></div>
+        <button type="button" id="addRef" class="fx-btn ghost">+ Add reference line</button>
+      </section>
+
+      <!-- 8. Tooltip -->
+      <section>
+        <h2><span class="fx-num">8</span>Tooltip</h2>
         <label class="fx-field">Style
           <select name="tooltipMode">
             <option value="custom">Smart tooltip (value + growth)</option>

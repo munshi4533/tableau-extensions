@@ -42,6 +42,7 @@
     showGrid: false, // horizontal gridlines behind the line
     background: 'transparent', // transparent | white | custom
     bgColor: '#ffffff',
+    refLines: [], // reference lines: { source: fixed|calc|measure|param, value, calc, field, param, label, labelPos, color, style, width }
     yAxis: 'auto', // auto | zero | fit  (auto starts at zero unless the data sits far from zero)
     animate: true,
     tooltipMode: 'custom'
@@ -67,6 +68,7 @@
   let model = null;
   let lastData = null; // cached summary data, so settings changes can rebuild without re-querying
   let lastEnc = null;
+  let params = []; // Tableau parameters (for reference lines)
   let hasAnimated = false;
   let lastHoverTuple = 0;
   let selectedTuple = 0;
@@ -87,6 +89,7 @@
     loadSettings();
 
     worksheet.addEventListener(tableau.TableauEventType.SummaryDataChanged, refresh);
+    loadParameters();
     try {
       tableau.extensions.settings.addEventListener(tableau.TableauEventType.SettingsChanged, () => {
         loadSettings();
@@ -117,6 +120,19 @@
       model = { error: e.message || String(e) };
     }
     render();
+  }
+
+  // Parameters can drive reference lines; re-draw when one changes
+  async function loadParameters () {
+    try {
+      const list = await worksheet.getParametersAsync();
+      params = list.map((p) => ({ name: p.name, value: toNumber(p.currentValue), label: p.currentValue && p.currentValue.formattedValue }));
+      list.forEach((p) => {
+        if (p.__stHooked) return;
+        p.__stHooked = true;
+        p.addEventListener(tableau.TableauEventType.ParameterChanged, async () => { await loadParameters(); render(); });
+      });
+    } catch (e) { params = []; }
   }
 
   function rebuild () {
@@ -179,6 +195,7 @@
     const ttK = ttNamed.length ? ttNamed : colNames.filter((c) => !used.has(c)).map((c) => ({ name: c, k: c }));
     const kpiK = kpiF.map((f) => ({ name: cleanName(f.name), k: key(f) })).filter((t) => t.k);
     let kpiRow = null; // row of the KPI shelf at the latest date
+    const measMaps = new Map(); // extra numeric fields (Detail / Tooltip) per period, for reference lines
 
     // Decide the x type from the data
     const parsed = rows.map((r) => parseX(r[dateK]));
@@ -209,6 +226,12 @@
       const k = xType === 'ordinal' ? xLabel : +px.v;
       if (xType === 'ordinal' && !seenOrd.has(k)) { seenOrd.add(k); ordinalOrder.push(k); }
       if (!unitSample && dv && dv.formattedValue) unitSample = dv.formattedValue;
+      for (const t of ttK) {
+        const v = toNumber(r[t.k]);
+        if (v === null) continue;
+        if (!measMaps.has(t.k)) measMaps.set(t.k, { name: cleanName(t.name), byKey: new Map(), sample: r[t.k].formattedValue });
+        measMaps.get(t.k).byKey.set(k, v);
+      }
       if (kpiK.length && toNumber(r[kpiK[0].k]) !== null) {
         const rank = xType === 'ordinal' ? ordinalOrder.indexOf(k) : k;
         if (!kpiRow || rank >= kpiRow.rank) kpiRow = { rank, r };
@@ -316,6 +339,7 @@
       rawGrain,
       allNegative: series.every((s0) => s0.points.every((p) => p.y <= 0)) && series.some((s0) => s0.points.some((p) => p.y < 0)),
       kpiShelf,
+      measures: [...measMaps.entries()].map(([key, v]) => ({ key, name: v.name, byKey: v.byKey, unit: detectUnit(v.sample) })),
       valueName: cleanName(valF.name || 'Value'),
       seriesName: serF ? cleanName(serF.name) : null
     };
@@ -661,7 +685,8 @@
     if (W < 60 || H < 50) return;
 
     const { series, keys, xType, single } = model;
-    const allY = [].concat(...series.map((s) => s.points.map((p) => p.y)));
+    const refs = computeRefLines();
+    const allY = [].concat(...series.map((s) => s.points.map((p) => p.y)), ...refs.map((r) => (r.points ? r.points.map((p) => p.y) : [r.value])));
     let [y0, y1] = d3.extent(allY);
     // Start the value axis at zero only when that doesn't squash the line (e.g. not for -3.8M … -3.6M)
     let includeZero = cfg.yAxis === 'zero';
@@ -715,6 +740,8 @@
     }
     g.append('g').attr('class', 'st-xaxis').attr('transform', `translate(0,${ih})`).call(xAxis)
       .call((a) => a.selectAll('.tick line').attr('stroke', 'var(--axis)'));
+
+    const refRects = drawRefLines(g, refs, { iw, ih, y, keyX, m });
 
     const curve = curveFactory();
     const lineGen = d3.line().curve(curve).x(px).y((p) => y(p.y));
@@ -794,7 +821,7 @@
       if (endLabels) endRects = drawEndLabels(plot, series, px, y);
     }
 
-    drawValueLabels(plot, series, px, y, iw, ih, single, endRects, m);
+    drawValueLabels(plot, series, px, y, iw, ih, single, endRects.concat(refRects), m);
 
     if (animate) {
       plot.selectAll('.st-line').each(function () {
@@ -835,6 +862,108 @@
       if (g === 'month') return step >= 12 ? String(yr) : d3.utcFormat(i === 0 || d.getUTCMonth() === 0 ? '%b %Y' : '%b')(d);
       return d3.utcFormat(i === 0 ? '%-d %b %Y' : '%-d %b')(d);
     });
+  }
+
+  // ---------------------------------------------------------------- reference lines
+  const REF_CALC = { avg: 'Average', median: 'Median', min: 'Minimum', max: 'Maximum', first: 'First', last: 'Latest' };
+
+  function parseFixed (txt) {
+    const t = String(txt ?? '').trim();
+    if (!t) return null;
+    const mult = /k$/i.test(t) ? 1e3 : /m$/i.test(t) ? 1e6 : /b$/i.test(t) ? 1e9 : 1;
+    const v = parseFloat(t.replace(/[^0-9.\-−]/g, '').replace('−', '-'));
+    if (!Number.isFinite(v)) return null;
+    return /%$/.test(t) ? v / 100 : v * mult;
+  }
+
+  // -> [{ def, value } | { def, points: [{k, y}] }] with a ready label text
+  function computeRefLines () {
+    const out = [];
+    if (!model || !Array.isArray(cfg.refLines)) return out;
+    const allPts = [].concat(...model.series.map((s0) => s0.points));
+    for (const d of cfg.refLines) {
+      let value = null; let points = null; let auto = '';
+      if (d.source === 'fixed') { value = parseFixed(d.value); auto = 'Reference'; } else if (d.source === 'calc') {
+        const ys = allPts.map((p) => p.y).sort((a, b) => a - b);
+        const tot = model.totals;
+        if (!ys.length) continue;
+        const kind = d.calc || 'avg';
+        value = kind === 'avg' ? d3.mean(ys) : kind === 'median' ? d3.median(ys) : kind === 'min' ? ys[0] : kind === 'max' ? ys[ys.length - 1]
+          : kind === 'first' ? (model.single ? tot[0].y : null) : (model.single ? tot[tot.length - 1].y : null);
+        auto = REF_CALC[kind];
+      } else if (d.source === 'measure') {
+        const mm = (model.measures || []).find((x) => x.key === d.field) || (model.measures || [])[0];
+        if (!mm) continue;
+        const vals = model.keys.filter((k) => mm.byKey.has(k)).map((k) => ({ k, y: mm.byKey.get(k) }));
+        if (!vals.length) continue;
+        const same = vals.every((p) => Math.abs(p.y - vals[0].y) <= Math.abs(vals[0].y) * 1e-9);
+        if (same) value = vals[0].y; else points = vals;
+        auto = mm.name;
+      } else if (d.source === 'param') {
+        const p = params.find((x) => x.name === d.param) || params.find((x) => x.value !== null);
+        if (!p || p.value === null) continue;
+        value = p.value; auto = p.name;
+      }
+      if (value === null && !points) continue;
+      const shown = points ? points[points.length - 1].y : value;
+      const num = fmtNum(shown, null, true);
+      const label = d.label ? (d.label.includes('{value}') ? d.label.replace('{value}', num) : d.label) : `${auto} ${num}`;
+      out.push({ def: d, value, points, label });
+    }
+    return out;
+  }
+
+  function drawRefLines (g, refs, { iw, ih, y, keyX, m }) {
+    const rects = [];
+    if (!refs.length) return rects;
+    const gRef = g.append('g').attr('class', 'st-refs');
+    const ls = size('labelSize', 10);
+    const ctx = document.createElement('canvas').getContext('2d');
+    ctx.font = `600 ${ls}px ${getComputedStyle(document.body).fontFamily}`;
+    const polys = model.series.map((s0) => s0.points.map((p) => [keyX(p.k), y(p.y)])); // data lines, to keep labels off them
+    const dash = (st, w) => (st === 'solid' ? null : st === 'dotted' ? `${w} ${w * 2}` : `${w * 4} ${w * 3}`);
+    refs.forEach((r) => {
+      const d = r.def;
+      const color = d.color || '#52514e';
+      const w = +d.width || 1.5;
+      let lx; let ly;
+      if (r.points) {
+        const line = d3.line().curve(d3.curveMonotoneX).x((p) => keyX(p.k)).y((p) => y(p.y));
+        gRef.append('path').attr('d', line(r.points)).attr('fill', 'none').attr('stroke', color).attr('stroke-width', w).attr('stroke-dasharray', dash(d.style, w));
+        const lp = (d.labelPos === 'left' ? r.points[0] : r.points[r.points.length - 1]);
+        lx = keyX(lp.k); ly = y(lp.y);
+      } else {
+        const yy = y(r.value);
+        gRef.append('line').attr('x1', 0).attr('x2', iw).attr('y1', yy).attr('y2', yy).attr('stroke', color).attr('stroke-width', w).attr('stroke-dasharray', dash(d.style, w));
+        rects.push({ x0: 0, x1: iw, y0: yy - 1, y1: yy + 1 }); // keep value labels off the line
+        lx = d.labelPos === 'left' ? 0 : iw; ly = yy;
+      }
+      if (d.labelPos === 'none') return;
+      const tw = ctx.measureText(r.label).width + 4;
+      const left = d.labelPos === 'left';
+      const hits = (q) => rects.some((o) => q.x0 < o.x1 && q.x1 > o.x0 && q.y0 < o.y1 && q.y1 > o.y0);
+      const onData = (q) => polys.some((pl) => pl.some((pt, k) => k > 0 && Math.max(pl[k - 1][0], pt[0]) >= q.x0 && Math.min(pl[k - 1][0], pt[0]) <= q.x1 &&
+        Math.max(pl[k - 1][1], pt[1]) >= q.y0 - 1 && Math.min(pl[k - 1][1], pt[1]) <= q.y1 + 1));
+      // try above the line, then below, then slide sideways so labels of nearby lines don't collide
+      let spot = null; let fallback = null;
+      for (let shift = 0; shift <= 2 && !spot; shift++) {
+        const off = shift * (tw + 8) * (left ? 1 : -1);
+        const x0 = left ? Math.max(0, lx + 2) + off : Math.min(iw - tw, lx - tw - 2) + off;
+        if (x0 < 0 || x0 + tw > iw) continue;
+        for (const top of [ly - ls - 5, ly + 4]) {
+          const q = { x0, x1: x0 + tw, y0: top, y1: top + ls + 2 };
+          if (q.y0 < -m.top + 2 || q.y1 > ih) continue;
+          if (!hits(q) && !onData(q)) { spot = q; break; }
+          if (!hits(q) && !fallback) fallback = q;
+        }
+      }
+      spot = spot || fallback; // prefer a spot off the data line; else any free spot
+      if (!spot) return;
+      gRef.append('text').attr('class', 'st-annot st-reflabel').attr('x', spot.x0 + tw / 2).attr('y', spot.y0 + ls).attr('text-anchor', 'middle')
+        .attr('fill', color).style('fill', color).text(r.label);
+      rects.push(spot);
+    });
+    return rects;
   }
 
   // ---------------------------------------------------------------- value labels (collision-free)
@@ -1089,6 +1218,8 @@
       grain: model.grain,
       rawGrain: model.rawGrain,
       hasKpiShelf: !!model.kpiShelf,
+      measures: (model.measures || []).map((mm) => ({ key: mm.key, name: mm.name })),
+      params: params.filter((p) => p.value !== null).map((p) => p.name),
       kpiShelfNames: model.kpiShelf ? [model.kpiShelf.name, model.kpiShelf.compareName].filter(Boolean) : [],
       single: model.single,
       valueName: model.valueName,

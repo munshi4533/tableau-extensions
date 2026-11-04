@@ -1,7 +1,7 @@
 {
   "name": "Smooth Trend",
   "manifestName": "SmoothTrend",
-  "version": "1.7.1",
+  "version": "1.8.0",
   "description": "Smooth line trend with a KPI header (latest, MTD, QTD, YTD or your own calculation), growth/degrowth coloring and smart tooltips.",
   "entry": "index.html",
   "icon": "icon.png",

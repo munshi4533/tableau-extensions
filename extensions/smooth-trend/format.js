@@ -30,7 +30,9 @@
     if (saved.yZero !== undefined && !saved.yAxis) saved.yAxis = saved.yZero ? 'auto' : 'fit';
     cfg = { ...DEFAULTS, ...saved };
 
+    cfg.refLines = Array.isArray(cfg.refLines) ? cfg.refLines.map((r) => ({ ...r })) : [];
     fill();
+    drawRefs();
     refreshUi();
 
     form.addEventListener('input', () => { read(); refreshUi(); scheduleSave(); });
@@ -42,7 +44,60 @@
       try { await tableau.extensions.settings.saveAsync(); } catch (e) { /* ignore */ }
       tableau.extensions.ui.closeDialog('cancel');
     });
-    $('reset').addEventListener('click', () => { cfg = { ...DEFAULTS }; fill(); refreshUi(); scheduleSave(); });
+    $('reset').addEventListener('click', () => { cfg = { ...DEFAULTS, refLines: [] }; fill(); drawRefs(); refreshUi(); scheduleSave(); });
+    $('addRef').addEventListener('click', () => {
+      const hasMeasure = (ctx.measures || []).length;
+      cfg.refLines.push({ source: hasMeasure ? 'measure' : 'calc', calc: 'avg', field: hasMeasure ? ctx.measures[0].key : '', param: (ctx.params || [])[0] || '', value: '', label: '', labelPos: 'right', color: '#52514e', style: 'dashed', width: '1.5' });
+      drawRefs(); scheduleSave();
+    });
+    $('refs').addEventListener('input', (e) => {
+      const el = e.target; const card = el.closest('[data-i]');
+      if (!card || !el.dataset.f) return;
+      cfg.refLines[+card.dataset.i][el.dataset.f] = el.value;
+      if (el.dataset.f === 'source') drawRefs();
+    });
+    $('refs').addEventListener('click', (e) => {
+      const d = e.target.closest('[data-del]');
+      if (!d) return;
+      cfg.refLines.splice(+d.dataset.del, 1); drawRefs(); scheduleSave();
+    });
+  }
+
+  // ------------------------------------------------------------ reference lines
+  const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const opts = (list, v) => list.map(([k, t]) => `<option value="${esc(k)}" ${String(k) === String(v) ? 'selected' : ''}>${esc(t)}</option>`).join('');
+  function drawRefs () {
+    const box = $('refs');
+    if (!cfg.refLines.length) { box.innerHTML = '<p class="fx-hint">No reference lines yet.</p>'; return; }
+    const measures = ctx.measures || []; const prms = ctx.params || [];
+    box.innerHTML = cfg.refLines.map((r, i) => {
+      let what = '';
+      if (r.source === 'fixed') what = `<label class="fx-field">Value<input type="text" data-f="value" value="${esc(r.value)}" placeholder="e.g. 1500000, 1.5M, 25%"></label>`;
+      else if (r.source === 'calc') what = `<label class="fx-field">Calculation<select data-f="calc">${opts([['avg', 'Average'], ['median', 'Median'], ['min', 'Minimum'], ['max', 'Maximum'], ['first', 'First period'], ['last', 'Latest period']], r.calc)}</select></label>`;
+      else if (r.source === 'measure') what = measures.length
+        ? `<label class="fx-field">Measure<select data-f="field">${opts(measures.map((m) => [m.key, m.name]), r.field)}</select></label>`
+        : '<p class="fx-hint" style="flex-basis:100%">Drag a measure (e.g. Target, or a calculation like WINDOW_AVG) onto <b>Detail</b> on the Marks card, then reopen this window.</p>';
+      else what = prms.length
+        ? `<label class="fx-field">Parameter<select data-f="param">${opts(prms.map((p) => [p, p]), r.param)}</select></label>`
+        : '<p class="fx-hint" style="flex-basis:100%">No number parameters found in this workbook.</p>';
+      return `<div class="ref" data-i="${i}">
+        <div class="row">
+          <label class="fx-field">Value from<select data-f="source">${opts([['fixed', 'Fixed number'], ['calc', 'Calculation'], ['measure', 'Measure on Detail / Tooltip'], ['param', 'Parameter']], r.source)}</select></label>
+          ${what}
+          <button type="button" class="x" data-del="${i}" title="Remove">×</button>
+        </div>
+        <div class="row">
+          <label class="fx-field">Label<input type="text" data-f="label" value="${esc(r.label)}" placeholder="Automatic (e.g. Average 1.2M)"></label>
+          <label class="fx-field">Label position<select data-f="labelPos">${opts([['right', 'Right'], ['left', 'Left'], ['none', 'No label']], r.labelPos)}</select></label>
+        </div>
+        <div class="row">
+          <label class="fx-color">Color <input type="color" data-f="color" value="${esc(r.color || '#52514e')}"></label>
+          <label class="fx-field">Line<select data-f="style">${opts([['dashed', 'Dashed'], ['solid', 'Solid'], ['dotted', 'Dotted']], r.style)}</select></label>
+          <label class="fx-field">Width<select data-f="width">${opts([['1', '1'], ['1.5', '1.5'], ['2', '2'], ['3', '3']], r.width)}</select></label>
+        </div>
+        <p class="fx-hint">Use {value} in the label to place the number, e.g. "Target {value}".</p>
+      </div>`;
+    }).join('');
   }
 
   // ------------------------------------------------------------ form <-> cfg

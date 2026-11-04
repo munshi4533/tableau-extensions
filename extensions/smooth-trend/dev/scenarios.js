@@ -94,6 +94,22 @@ MockTableau.scenario('overdraft', (M) => {
   return { columns, data, encodings: [{ id: 'date', field: M.field(columns[0]) }, { id: 'value', field: M.field(columns[1]) }] };
 });
 
+MockTableau.scenario('target', (M) => {
+  // monthly sales with a monthly target on Detail and a parameter "Sales Goal"
+  const columns = ['MONTH(Order Date)', 'SUM(Sales)', 'SUM(Target)', 'AGG(Budget Line)'];
+  let v = 1100000;
+  const data = M.months(14, Date.UTC(2025, 8, 1)).map((d, i) => {
+    v = v * (1.03 + Math.sin(i * 1.1) * 0.06);
+    const t = 1150000 + i * 45000; const b = 1500000;
+    return [M.dv(M.iso(d), d, M.fmtMonth(d)), M.dv(v, v, M.fmtMoney(v)), M.dv(t, t, M.fmtMoney(t)), M.dv(b, b, M.fmtMoney(b))];
+  });
+  return {
+    columns, data,
+    encodings: [{ id: 'date', field: M.field(columns[0]) }, { id: 'value', field: M.field(columns[1]) }, { id: 'detail', field: M.field(columns[2]) }, { id: 'detail', field: M.field(columns[3]) }],
+    params: [{ name: 'Sales Goal', value: 1800000, formatted: 'SAR 1,800,000' }]
+  };
+});
+
 MockTableau.scenario('overdraftYear', (M) => {
   // 306 days, -2.74M stepping down to -3.84M (like the real OD Total sheet)
   const columns = ['snap_dt', 'SUM(Total Overdrawn Amount (SAR))'];
