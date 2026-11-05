@@ -172,3 +172,24 @@ MockTableau.scenario('biggroups', (M) => {
   });
   return { columns, data, encodings: [{ id: 'date', field: M.field(columns[0]) }, { id: 'series', field: M.field(columns[1]) }, { id: 'value', field: M.field(columns[2]) }] };
 });
+
+MockTableau.scenario('mn', (M) => {
+  // values with a Tableau custom number format like "892 Mn"; a KPI-shelf calc too; optional Series
+  const columns = ['MONTH(Txn Date)', 'SUM(Disbursed Amount)', 'MTD Disbursed', 'Product'];
+  const fmtMn = (v) => Math.round(v / 1e6).toLocaleString('en-US') + ' Mn';
+  const data = [];
+  M.months(14).forEach((d, i) => {
+    [['Cash', 0.62], ['BNPL', 0.38]].forEach(([g, sh]) => {
+      const v = (700e6 + i * 14e6) * sh; const k = 892e6 * sh;
+      data.push([M.dv(M.iso(d), d, M.fmtMonth(d)), M.dv(v, v, fmtMn(v)), M.dv(k, k, fmtMn(k)), M.dv(g, g, g)]);
+    });
+  });
+  const grouped = new URLSearchParams(location.search).get('grouped') === '1';
+  const enc = [{ id: 'date', field: M.field(columns[0]) }, { id: 'value', field: M.field(columns[1]) }, { id: 'kpi', field: M.field(columns[2]) }];
+  if (grouped) enc.push({ id: 'series', field: M.field(columns[3]) });
+  else { // one row per month, like Tableau without the dimension
+    const by = new Map(); data.forEach((r) => { const k = r[0].value; const o = by.get(k); if (!o) by.set(k, r.slice(0, 3).map((x) => ({ ...x }))); else { o[1] = M.dv(o[1].value + r[1].value, o[1].value + r[1].value, fmtMn(o[1].value + r[1].value)); o[2] = M.dv(o[2].value + r[2].value, o[2].value + r[2].value, fmtMn(o[2].value + r[2].value)); } });
+    return { columns: columns.slice(0, 3), data: [...by.values()], encodings: enc };
+  }
+  return { columns, data, encodings: enc };
+});

@@ -42,6 +42,7 @@ Smooth line trend with a KPI header, growth/degrowth coloring and smart tooltips
 Click a point to select it in Tableau (drives dashboard actions). Ctrl/Cmd-click adds to the selection.
 
 ## Version history
+- **1.9.3**: With a dimension on Series, the KPI-shelf headline is now the total of all groups (it showed one group before), or the group picked in *Headline number shows*. Understands Tableau display units like "892 Mn": totals, MTD/YTD and axis ticks print as "11,074 Mn" instead of "11,074,000,000 Mn".
 - **1.9.2**: Faster updates on filter/parameter changes: a burst of Tableau events is merged into one data load and the chart draws as soon as it arrives (1.9.1 could load twice before drawing); no extra redraw after each update. Added stress-test scenarios bigdaily and biggroups.
 - **1.9.1**: More reliable on Tableau Server and dashboards: data loads one at a time when filters or parameters change quickly, retries once, keeps the last good chart instead of going blank, redraws when a hidden sheet appears.
 - **1.9.0**: *Lines by group* (a dimension on Series works like Tableau's Color shelf): per-group color, solid/dashed/dotted, width, area fill and hide; click a legend item to show/hide a line; value labels *Latest only* (end labels); the headline number can follow one group instead of the total.

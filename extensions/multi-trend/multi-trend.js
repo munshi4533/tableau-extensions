@@ -173,13 +173,13 @@
         const dv = r[m.key];
         const y = toNumber(dv);
         if (y === null) continue;
-        if (!m.unit && dv.formattedValue) m.unit = detectUnit(dv.formattedValue);
+        if (dv.formattedValue && (!m.sample || Math.abs(y) > Math.abs(m.sample.y))) m.sample = { text: dv.formattedValue, y }; // largest value: best for spotting K / Mn display units
         const prev = m.byKey.get(k);
         if (prev) { prev.y += y; prev.label = null; } else m.byKey.set(k, { y, label: dv.formattedValue });
       }
       if (extraKeys.length && !extras.has(k)) extras.set(k, extraKeys.map((ek) => ({ name: cleanName(ek), value: formatted(r[ek]) })).filter((e) => e.value !== ''));
     });
-    measures.forEach((m) => { m.unit = m.unit || { prefix: '', suffix: '', pct: false }; });
+    measures.forEach((m) => { m.unit = m.sample ? detectUnit(m.sample.text, m.sample.y) : detectUnit(null); });
     const keys = xType === 'ordinal' ? order : order.slice().sort((a, b) => a - b);
     if (!keys.length) return { empty: true, noData: true };
 
@@ -192,12 +192,14 @@
     return { xType, keys, labels, measures, extras, tuples, grain, dateName: cleanName(dateF.name), dateField: dateF.name };
   }
 
-  // a measure in a different unit than the first one (e.g. Margin % next to SAR) starts on the right axis
+  // a measure in a different unit than the first one (Margin % next to SAR, a count next to Mn) starts on the right axis
   const unitKind = (u) => (u ? (u.pct ? '%' : u.prefix + '|' + u.suffix) : '');
   function defaultsFor (m) {
     const d = measureDefaults(m.index);
     const first = model && model.measures && model.measures[0];
-    if (first && m !== first && unitKind(m.unit) !== unitKind(first.unit) && (m.unit.pct || first.unit.pct)) d.axis = 'right';
+    const peak = (mm) => d3.max([...mm.byKey.values()], (p) => Math.abs(p.y)) || 0;
+    const farApart = (a, b) => { const x = peak(a); const y = peak(b); return x > 0 && y > 0 && Math.max(x, y) / Math.min(x, y) > 20; };
+    if (first && m !== first && unitKind(m.unit) !== unitKind(first.unit) && (m.unit.pct || first.unit.pct || farApart(m, first))) d.axis = 'right';
     return d;
   }
   function mcfg (m) { return { ...defaultsFor(m), ...((cfg.measures || {})[m.key] || {}) }; }
@@ -619,9 +621,24 @@
     return names.find((n) => n.toLowerCase() === lc) || names.find((n) => cleanName(n).toLowerCase() === cn) || names.find((n) => n.toLowerCase().includes(cn)) || null;
   }
   const cleanName = (n) => String(n || '').replace(/^(SUM|AVG|MIN|MAX|CNT|CNTD|COUNT|COUNTD|MEDIAN|ATTR|AGG|YEAR|QUARTER|MONTH|WEEK|DAY|MY|MDY|TMN|TQR|TYR|TDY)\((.*)\)$/i, '$2');
-  function detectUnit (sample) {
-    const s = String(sample || '').trim();
-    return { prefix: (s.match(/^[^\d\-−(.]*/) || [''])[0], suffix: (s.match(/[^\d.,)]*$/) || [''])[0], pct: /%\s*$/.test(s) };
+  // Reads prefix/suffix from Tableau's formatted text, and the display scale by comparing the text
+  // with the real value: "892 Mn" for 892,000,000 -> scale 1e6, so our own numbers print the same way.
+  function detectUnit (sample, value) {
+    if (!sample) return { prefix: '', suffix: '', pct: false, scale: 1, decimals: null };
+    const s = String(sample).trim();
+    const prefix = (s.match(/^[^\d\-−(.]*/) || [''])[0];
+    const suffix = (s.match(/[^\d.,)]*$/) || [''])[0];
+    const pct = /%\s*$/.test(s);
+    const num = (s.match(/\d[\d,]*(\.\d+)?/) || [''])[0];
+    const shown = parseFloat(num.replace(/,/g, ''));
+    let scale = 1;
+    if (!pct && Number.isFinite(value) && value !== 0 && shown > 0) {
+      const r = Math.log10(Math.abs(value) / shown);
+      const best = [0, 3, 6, 9, 12].reduce((a, e) => (Math.abs(r - e) < Math.abs(r - a) ? e : a), 0);
+      if (Math.abs(r - best) < 0.3) scale = Math.pow(10, best);
+    }
+    const dm = num.match(/\.(\d+)$/);
+    return { prefix, suffix, pct, scale, decimals: dm ? dm[1].length : 0 };
   }
   function fmtNum (v, unit, compact) {
     if (v === null || v === undefined || !Number.isFinite(v)) return '–';
@@ -630,7 +647,10 @@
     const neg = n < 0; n = Math.abs(n);
     let body;
     if (u.pct) body = d3.format(',.1f')(n);
-    else if (compact && n >= 1000) body = d3.format('.3~s')(n).replace('G', 'B');
+    else if (u.scale > 1) { // same display unit as Tableau (e.g. 892 Mn); small numbers get a decimal or two
+      const q = n / u.scale;
+      body = q === 0 ? '0' : d3.format(`,.${Math.max(u.decimals || 0, q < 1 ? 2 : q < 10 ? 1 : 0)}${compact ? '~' : ''}f`)(q); // axis ticks: 2.5M not 2.50M
+    } else if (compact && n >= 1000) body = d3.format('.3~s')(n).replace('G', 'B');
     else body = d3.format(n >= 100 ? ',.0f' : ',.2~f')(n);
     return (neg ? '−' : '') + u.prefix + body + u.suffix;
   }

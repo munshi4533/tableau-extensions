@@ -32,3 +32,14 @@
 
   MockTableau.scenario('empty', () => ({ columns: [], data: [], encodings: [] }));
 })();
+
+MockTableau.scenario('mn', (M) => {
+  // Tableau custom number format "892 Mn" next to a count with display units "12.4K"
+  const columns = ['MONTH(Disb Date)', 'SUM(Disbursed Amount)', 'SUM(Target Amount)', 'CNT(Contracts)'];
+  const data = M.months(12, Date.UTC(2025, 10, 1)).map((d, i) => {
+    const v = 700e6 + i * 16e6 + Math.sin(i) * 40e6; const t = 720e6 + i * 14e6; const c = 9800 + i * 260;
+    const mn = (x) => Math.round(x / 1e6).toLocaleString('en-US') + ' Mn';
+    return [M.dv(M.iso(d), d, M.fmtMonth(d)), M.dv(v, v, mn(v)), M.dv(t, t, mn(t)), M.dv(c, c, (c / 1000).toFixed(1) + 'K')];
+  });
+  return { columns, data, encodings: [{ id: 'date', field: M.field(columns[0]) }, { id: 'measures', field: M.field(columns[1]) }, { id: 'measures', field: M.field(columns[2]) }, { id: 'measures', field: M.field(columns[3]) }] };
+});

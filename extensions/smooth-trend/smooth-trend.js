@@ -221,7 +221,7 @@
     const ttNamed = ttF.map((f) => ({ name: f.name, k: key(f) })).filter((t) => t.k);
     const ttK = ttNamed.length ? ttNamed : colNames.filter((c) => !used.has(c)).map((c) => ({ name: c, k: c }));
     const kpiK = kpiF.map((f) => ({ name: cleanName(f.name), k: key(f) })).filter((t) => t.k);
-    let kpiRow = null; // row of the KPI shelf at the latest date
+    let kpiRows = null; // rows of the KPI shelf at the latest date (one per group when Series is used)
     const measMaps = new Map(); // extra numeric fields (Detail / Tooltip) per period, for reference lines
 
     // Decide the x type from the data
@@ -252,16 +252,17 @@
       const x = xType === 'ordinal' ? xLabel : px.v;
       const k = xType === 'ordinal' ? xLabel : +px.v;
       if (xType === 'ordinal' && !seenOrd.has(k)) { seenOrd.add(k); ordinalOrder.push(k); }
-      if (!unitSample && dv && dv.formattedValue) unitSample = dv.formattedValue;
+      if (dv && dv.formattedValue && (!unitSample || Math.abs(y) > Math.abs(unitSample.y))) unitSample = { text: dv.formattedValue, y }; // largest value: best for spotting K / Mn display units
       for (const t of ttK) {
         const v = toNumber(r[t.k]);
         if (v === null) continue;
-        if (!measMaps.has(t.k)) measMaps.set(t.k, { name: cleanName(t.name), byKey: new Map(), sample: r[t.k].formattedValue });
+        if (!measMaps.has(t.k)) measMaps.set(t.k, { name: cleanName(t.name), byKey: new Map(), sample: r[t.k].formattedValue, sampleY: v });
         measMaps.get(t.k).byKey.set(k, v);
       }
       if (kpiK.length && toNumber(r[kpiK[0].k]) !== null) {
         const rank = xType === 'ordinal' ? ordinalOrder.indexOf(k) : k;
-        if (!kpiRow || rank >= kpiRow.rank) kpiRow = { rank, r };
+        if (!kpiRows || rank > kpiRows.rank) kpiRows = { rank, rows: [r] };
+        else if (rank === kpiRows.rank) kpiRows.rows.push(r);
       }
 
       const sName = serK ? formatted(r[serK]) : (valF.name ? cleanName(valF.name) : 'Value');
@@ -288,7 +289,7 @@
       }
     });
 
-    const unit = detectUnit(unitSample);
+    const unit = unitSample ? detectUnit(unitSample.text, unitSample.y) : detectUnit(null);
     // Combined periods: sum, or average for % measures / when "Average" is chosen
     const useAvg = cfg.kpiAgg === 'avg' || (cfg.kpiAgg === 'auto' && unit.pct);
     if (useAvg) seriesMap.forEach((m) => m.forEach((p) => { if (p.n > 1) p.y /= p.n; }));
@@ -343,14 +344,22 @@
     if (!totals.length) return { empty: true, noData: true };
 
     let kpiShelf = null;
-    if (kpiRow) {
+    if (kpiRows) {
       const [a, b] = kpiK;
+      // with a dimension on Series there is one row per group: use the chosen group, or combine them
+      let kr = kpiRows.rows;
+      if (serK && cfg.kpiSeries) { const one = kr.filter((r) => formatted(r[serK]) === cfg.kpiSeries); if (one.length) kr = one; }
+      const sample = kr[0][a.k];
+      const kUnit = detectUnit(sample && sample.formattedValue, toNumber(sample));
+      const avg = cfg.kpiAgg === 'avg' || (cfg.kpiAgg === 'auto' && kUnit.pct);
+      const comb = (k) => { const v = kr.map((r) => toNumber(r[k])).filter((x) => x !== null); return v.length ? (avg ? d3.mean(v) : d3.sum(v)) : null; };
+      const value = kr.length === 1 ? toNumber(sample) : comb(a.k);
       kpiShelf = {
         name: a.name,
-        value: toNumber(kpiRow.r[a.k]),
-        valueLabel: formatted(kpiRow.r[a.k]),
+        value,
+        valueLabel: kr.length === 1 ? formatted(sample) : fmtNum(value, kUnit),
         compareName: b ? b.name : null,
-        compare: b ? toNumber(kpiRow.r[b.k]) : null
+        compare: b ? (kr.length === 1 ? toNumber(kr[0][b.k]) : comb(b.k)) : null
       };
     }
 
@@ -366,7 +375,7 @@
       rawGrain,
       allNegative: series.every((s0) => s0.points.every((p) => p.y <= 0)) && series.some((s0) => s0.points.some((p) => p.y < 0)),
       kpiShelf,
-      measures: [...measMaps.entries()].map(([key, v]) => ({ key, name: v.name, byKey: v.byKey, unit: detectUnit(v.sample) })),
+      measures: [...measMaps.entries()].map(([key, v]) => ({ key, name: v.name, byKey: v.byKey, unit: detectUnit(v.sample, v.sampleY) })),
       valueName: cleanName(valF.name || 'Value'),
       seriesName: serF ? cleanName(serF.name) : null
     };
@@ -439,12 +448,24 @@
   const cleanName = (n) => String(n || '').replace(/^(SUM|AVG|MIN|MAX|CNT|CNTD|COUNT|COUNTD|MEDIAN|ATTR|AGG|STDEV|VAR|YEAR|QUARTER|MONTH|WEEK|DAY|MY|MDY|QR|TMN|TQR|TYR|TWK|TDY)\((.*)\)$/i, '$2');
 
   // ---------------------------------------------------------------- number formatting
-  function detectUnit (sample) {
-    if (!sample) return { prefix: '', suffix: '', pct: false };
+  // Reads prefix/suffix from Tableau's formatted text, and the display scale by comparing the text
+  // with the real value: "892 Mn" for 892,000,000 -> scale 1e6, so our own numbers print the same way.
+  function detectUnit (sample, value) {
+    if (!sample) return { prefix: '', suffix: '', pct: false, scale: 1, decimals: null };
     const s = String(sample).trim();
     const prefix = (s.match(/^[^\d\-−(.]*/) || [''])[0];
     const suffix = (s.match(/[^\d.,)]*$/) || [''])[0];
-    return { prefix, suffix, pct: /%/.test(suffix) };
+    const pct = /%/.test(suffix);
+    const num = (s.match(/\d[\d,]*(\.\d+)?/) || [''])[0];
+    const shown = parseFloat(num.replace(/,/g, ''));
+    let scale = 1;
+    if (!pct && Number.isFinite(value) && value !== 0 && shown > 0) {
+      const r = Math.log10(Math.abs(value) / shown);
+      const best = [0, 3, 6, 9, 12].reduce((a, e) => (Math.abs(r - e) < Math.abs(r - a) ? e : a), 0);
+      if (Math.abs(r - best) < 0.3) scale = Math.pow(10, best);
+    }
+    const dm = num.match(/\.(\d+)$/);
+    return { prefix, suffix, pct, scale, decimals: dm ? dm[1].length : 0 };
   }
 
   function fmtNum (v, unit, compact) {
@@ -455,7 +476,10 @@
     n = Math.abs(n);
     let body;
     if (u.pct) body = d3.format(',.1f')(n);
-    else if (compact && n >= 1000) body = d3.format('.3~s')(n).replace('G', 'B');
+    else if (u.scale > 1) { // same display unit as Tableau (e.g. 892 Mn); small numbers get a decimal or two
+      const q = n / u.scale;
+      body = q === 0 ? '0' : d3.format(`,.${Math.max(u.decimals || 0, q < 1 ? 2 : q < 10 ? 1 : 0)}${compact ? '~' : ''}f`)(q); // axis ticks: 2.5M not 2.50M
+    } else if (compact && n >= 1000) body = d3.format('.3~s')(n).replace('G', 'B');
     else body = d3.format(n >= 100 ? ',.0f' : ',.2~f')(n);
     return (neg ? '−' : '') + u.prefix + body + u.suffix;
   }
@@ -602,8 +626,8 @@
       const k = model.kpiShelf;
       out.value = k.value;
       out.valueText = cfg.shortNumbers ? '' : k.valueLabel;
-      out.label = k.name;
-      out.tooltip = `${k.name} at ${last.xLabel}`;
+      out.label = ks ? `${ks.name} · ${k.name}` : k.name;
+      out.tooltip = `${ks ? ks.name + ', ' : ''}${k.name} at ${last.xLabel}`;
       if (k.compare !== null) { out.base = k.compare; out.baseCaption = `vs ${k.compareName}`; }
       return out;
     }

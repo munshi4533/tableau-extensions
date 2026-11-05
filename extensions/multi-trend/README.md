@@ -30,6 +30,7 @@ A measure that is empty for some periods simply stops. For example, an MTD line 
 In the chart: hover for the tooltip; click a period to select it in Tableau (for dashboard actions); click a legend item to hide or show that measure.
 
 ## Version history
+- **1.0.3**: Understands Tableau display units like "892 Mn" or "12.4K": axis ticks and calculated numbers use the same unit (no more "800M Mn"). A measure in a very different unit (e.g. a count next to amounts in Mn) starts on the right axis.
 - **1.0.2**: Faster updates on filter/parameter changes: a burst of Tableau events is merged into one data load and the chart draws as soon as it arrives (1.0.1 could load twice before drawing); no extra redraw after each update.
 - **1.0.1**: More reliable on Tableau Server and dashboards: data loads one at a time when filters or parameters change quickly (it sometimes failed to draw before), retries once, keeps the last good chart instead of going blank, redraws when a hidden sheet appears. A % measure next to a currency measure now starts on the right axis.
 - **1.0.0**: first release.
