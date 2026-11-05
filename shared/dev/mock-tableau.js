@@ -56,11 +56,20 @@
     addEventListener: (type, fn) => { settingsListeners.push(fn); return () => {}; }
   };
 
+  // Like Tableau: only ONE summary-data reader may be open at a time, calls take a moment,
+  // and SummaryDataChanged can fire in bursts (filters, dashboard load). window.__mockFire(n) fires n events.
+  const dataListeners = [];
+  let readerOpen = false;
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  window.__mockFire = (n = 1) => { for (let i = 0; i < n; i++) dataListeners.forEach((fn) => fn({})); };
   const worksheet = {
     name: 'Mock Sheet',
-    addEventListener: () => () => {},
+    addEventListener: (type, fn) => { if (type === 'summary-data-changed') dataListeners.push(fn); return () => {}; },
     // Pages like Tableau does. Scenarios may add types: ['string','float','int','date',...] per column.
     getSummaryDataReaderAsync: async (pageRowCount) => {
+      await wait(30);
+      if (readerOpen) throw new Error('[mock] A summary data reader is already open. Release it before opening another.');
+      readerOpen = true;
       const d = data();
       const size = pageRowCount || 10000;
       const pageCount = Math.max(1, Math.ceil(d.data.length / size));
@@ -68,8 +77,8 @@
       return {
         pageCount,
         totalRowCount: d.data.length,
-        getPageAsync: async (p) => ({ columns, data: d.data.slice(p * size, (p + 1) * size) }),
-        releaseAsync: async () => {}
+        getPageAsync: async (p) => { await wait(20); return { columns, data: d.data.slice(p * size, (p + 1) * size) }; },
+        releaseAsync: async () => { readerOpen = false; }
       };
     },
     getVisualSpecificationAsync: async () => ({ activeMarksSpecificationIndex: 0, marksSpecifications: [{ encodings: data().encodings }] }),

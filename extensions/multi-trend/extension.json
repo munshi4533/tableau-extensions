@@ -1,7 +1,7 @@
 {
   "name": "Multi Measure Trend",
   "manifestName": "MultiTrend",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Several measures over time on one chart. Each measure can be a solid, dashed or dotted line, an area or bars, with its own color and axis, plus a tooltip comparing them.",
   "entry": "index.html",
   "icon": "icon.png",

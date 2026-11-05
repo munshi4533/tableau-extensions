@@ -2,7 +2,7 @@
   {
     "id": "multi-trend",
     "name": "Multi Measure Trend",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Several measures over time on one chart. Each measure can be a solid, dashed or dotted line, an area or bars, with its own color and axis, plus a tooltip comparing them.",
     "manifestName": "MultiTrend",
     "trex": "manifests/MultiTrend.trex",
@@ -20,7 +20,7 @@
   {
     "id": "smooth-trend",
     "name": "Smooth Trend",
-    "version": "1.9.0",
+    "version": "1.9.1",
     "description": "Smooth line trend with a KPI header (latest, MTD, QTD, YTD or your own calculation), growth/degrowth coloring and smart tooltips.",
     "manifestName": "SmoothTrend",
     "trex": "manifests/SmoothTrend.trex",

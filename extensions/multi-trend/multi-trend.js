@@ -71,24 +71,47 @@
     try {
       tableau.extensions.settings.addEventListener(tableau.TableauEventType.SettingsChanged, () => { loadSettings(); hasAnimated = true; rebuild(); render(); });
     } catch (e) { /* not available */ }
-    new ResizeObserver(debounce(render, 60)).observe(document.body);
+    const ro = new ResizeObserver(debounce(() => { if (model) render(); }, 60));
+    ro.observe(document.body); ro.observe($('chart'));
+    // a sheet that loads hidden (dashboard tab, show/hide container) has no size yet: draw when it appears
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && model) render(); });
     ExtMenu.attach(() => { hideTooltip(); return [ExtMenu.authoring() && { label: 'Format Extension…', icon: 'format', action: openFormatDialog }]; });
     refresh();
   }
 
-  async function refresh () {
-    try {
-      const [data, enc] = await Promise.all([getRows(), getEncodings()]);
-      lastData = data; lastEnc = enc;
-      model = buildModel(data, enc);
-    } catch (e) { console.error(e); model = { error: e.message || String(e) }; }
-    render();
+  // Tableau allows ONE open data reader at a time and fires SummaryDataChanged in bursts
+  // (dashboard load, filters, parameters). Load one at a time; if more events arrive meanwhile,
+  // load once more at the end. A failed load is retried once before showing an error.
+  let loading = null; let reloadAgain = false;
+  function refresh () {
+    if (loading) { reloadAgain = true; return loading; }
+    loading = (async () => {
+      do {
+        reloadAgain = false;
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            const [data, enc] = await Promise.all([getRows(), getEncodings()]);
+            lastData = data; lastEnc = enc;
+            model = buildModel(data, enc);
+            break;
+          } catch (e) {
+            console.error(e);
+            if (attempt === 0) { await new Promise((r) => setTimeout(r, 400)); continue; }
+            if (!lastData) model = { error: e.message || String(e) }; // keep the last good chart otherwise
+          }
+        }
+      } while (reloadAgain);
+      loading = null;
+      render();
+    })();
+    return loading;
   }
   function rebuild () { if (lastData) { try { model = buildModel(lastData, lastEnc); } catch (e) { model = { error: e.message }; } } }
 
   async function getRows () {
-    const reader = await worksheet.getSummaryDataReaderAsync(undefined, { ignoreSelection: true });
+    const reader = await worksheet.getSummaryDataReaderAsync(undefined, { ignoreSelection: true, applyWorksheetFormatting: true });
     const rows = []; let columns = []; let offset = 0;
+    try {
     for (let p = 0; p < reader.pageCount; p++) {
       const page = await reader.getPageAsync(p);
       columns = page.columns;
@@ -99,7 +122,7 @@
       });
       offset += page.data.length;
     }
-    await reader.releaseAsync();
+    } finally { await reader.releaseAsync().catch(() => {}); } // always release, or every later load fails
     return { rows, columns };
   }
 
@@ -117,9 +140,11 @@
     const mFields = enc.measures || [];
     if (!dateF || !mFields.length) return { empty: true, needDate: !dateF, needMeasures: !mFields.length };
     const names = columns.map((c) => c.fieldName);
-    const key = (f) => resolve(f.name, names);
+    const taken = new Set();
+    const key = (f) => { const k = resolve(f.name, names.filter((n) => !taken.has(n))) || resolve(f.name, names); if (k) taken.add(k); return k; };
     const dateK = key(dateF);
     const mKeys = mFields.map(key).filter(Boolean);
+    if (!dateK || !mKeys.length) throw new Error('Could not find the fields in the sheet data (' + [!dateK && dateF.name, !mKeys.length && mFields.map((f) => f.name).join(', ')].filter(Boolean).join('; ') + ').');
     const used = new Set([dateK, ...mKeys]);
     const ttF = enc.tooltip || [];
     const extraKeys = (ttF.length ? ttF.map(key) : names.filter((n) => !used.has(n))).filter((k) => k && !used.has(k));
@@ -163,12 +188,27 @@
     return { xType, keys, labels, measures, extras, tuples, grain, dateName: cleanName(dateF.name), dateField: dateF.name };
   }
 
-  function mcfg (m) { return { ...measureDefaults(m.index), ...((cfg.measures || {})[m.key] || {}) }; }
+  // a measure in a different unit than the first one (e.g. Margin % next to SAR) starts on the right axis
+  const unitKind = (u) => (u ? (u.pct ? '%' : u.prefix + '|' + u.suffix) : '');
+  function defaultsFor (m) {
+    const d = measureDefaults(m.index);
+    const first = model && model.measures && model.measures[0];
+    if (first && m !== first && unitKind(m.unit) !== unitKind(first.unit) && (m.unit.pct || first.unit.pct)) d.axis = 'right';
+    return d;
+  }
+  function mcfg (m) { return { ...defaultsFor(m), ...((cfg.measures || {})[m.key] || {}) }; }
   function visibleMeasures () { return model.measures.filter((m) => !mcfg(m).hidden && !hiddenNow.has(m.key)); }
   const mName = (m) => mcfg(m).label || m.name;
 
   // ================================================================ render
   function render () {
+    try { renderInner(); } catch (e) {
+      console.error(e);
+      hideChrome(); $('chart').innerHTML = '';
+      showEmpty('<b>Could not draw the chart.</b><br>' + esc(e.message || String(e)));
+    }
+  }
+  function renderInner () {
     hideTooltip();
     applyStyle();
     const chartEl = $('chart');
@@ -330,7 +370,7 @@
       .call((a) => a.selectAll('.tick line').attr('stroke', 'var(--axis)'));
 
     const plot = g.append('g');
-    const animate = cfg.animate && !hasAnimated;
+    const animate = cfg.animate && !hasAnimated && !document.hidden; // no draw-in in a background tab
     const series = vis.map((mm) => ({ m: mm, c: mcfg(mm), pts: keys.map((k) => { const p = mm.byKey.get(k); return p ? { k, y: p.y, label: p.label } : null; }) }));
 
     // areas first, then bars, then lines on top
@@ -533,7 +573,7 @@
 
   async function openFormatDialog () {
     const url = new URL('format.html' + window.location.search, window.location.href).href;
-    const ctx = model && model.measures ? { measures: model.measures.map((mm) => ({ key: mm.key, name: mm.name, def: measureDefaults(mm.index) })), xType: model.xType } : { measures: [] };
+    const ctx = model && model.measures ? { measures: model.measures.map((mm) => ({ key: mm.key, name: mm.name, def: defaultsFor(mm) })), xType: model.xType } : { measures: [] };
     try {
       await tableau.extensions.ui.displayDialogAsync(url, JSON.stringify({ ctx, defaults: DEFAULTS }), { width: 520, height: 720 });
     } catch (e) {
@@ -570,7 +610,8 @@
   const formatted = (dv) => (dv ? String(dv.formattedValue ?? dv.value ?? '') : '');
   function resolve (name, names) {
     if (names.includes(name)) return name;
-    return names.find((n) => n.toLowerCase() === String(name).toLowerCase()) || names.find((n) => n.includes(cleanName(name))) || null;
+    const lc = String(name).toLowerCase(); const cn = cleanName(name).toLowerCase();
+    return names.find((n) => n.toLowerCase() === lc) || names.find((n) => cleanName(n).toLowerCase() === cn) || names.find((n) => n.toLowerCase().includes(cn)) || null;
   }
   const cleanName = (n) => String(n || '').replace(/^(SUM|AVG|MIN|MAX|CNT|CNTD|COUNT|COUNTD|MEDIAN|ATTR|AGG|YEAR|QUARTER|MONTH|WEEK|DAY|MY|MDY|TMN|TQR|TYR|TDY)\((.*)\)$/i, '$2');
   function detectUnit (sample) {

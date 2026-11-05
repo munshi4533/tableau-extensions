@@ -30,4 +30,5 @@ A measure that is empty for some periods simply stops. For example, an MTD line 
 In the chart: hover for the tooltip; click a period to select it in Tableau (for dashboard actions); click a legend item to hide or show that measure.
 
 ## Version history
+- **1.0.1**: More reliable on Tableau Server and dashboards: data loads one at a time when filters or parameters change quickly (it sometimes failed to draw before), retries once, keeps the last good chart instead of going blank, redraws when a hidden sheet appears. A % measure next to a currency measure now starts on the right axis.
 - **1.0.0**: first release.
