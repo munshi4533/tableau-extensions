@@ -102,10 +102,14 @@
       });
     } catch (e) { /* settings events not available in this host */ }
 
-    const ro = new ResizeObserver(debounce(() => { if (model) render(); }, 60));
+    // redraw only when the chart area really changed size (not after our own header/legend updates)
+    const ro = new ResizeObserver(debounce(() => {
+      const c = $('chart');
+      if (model && (c.clientWidth !== drawnSize.w || c.clientHeight !== drawnSize.h)) render();
+    }, 60));
     ro.observe(document.body); ro.observe($('chart'));
     // a sheet that loads hidden (dashboard tab, show/hide container) has no size yet: draw when it appears
-    document.addEventListener('visibilitychange', () => { if (!document.hidden && model) render(); });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && model && !drawnSize.w) render(); });
 
     // right-click anywhere on the chart -> Format Extension (when editing the workbook)
     ExtMenu.attach(() => {
@@ -113,35 +117,35 @@
       return [ExtMenu.authoring() && { label: 'Format Extension…', icon: 'format', action: openFormatDialog }];
     });
 
-    refresh();
+    load();
   }
 
   // Tableau allows ONE open data reader at a time and fires SummaryDataChanged in bursts
-  // (dashboard load, filters, parameters). Load one at a time; if more events arrive meanwhile,
-  // load once more at the end. A failed load is retried once before showing an error.
-  let loading = null; let reloadAgain = false;
-  function refresh () {
-    if (loading) { reloadAgain = true; return loading; }
-    loading = (async () => {
-      do {
-        reloadAgain = false;
-        for (let attempt = 0; attempt < 2; attempt++) {
-          try {
-            const [data, enc] = await Promise.all([getSummaryRows(), getEncodings()]);
-            lastData = data; lastEnc = enc;
-            model = buildModel(data, enc);
-            break;
-          } catch (e) {
-            console.error(e);
-            if (attempt === 0) { await new Promise((r) => setTimeout(r, 400)); continue; }
-            if (!lastData) model = { error: e.message || String(e) }; // keep the last good chart otherwise
-          }
-        }
-      } while (reloadAgain);
-      loading = null;
-      render();
-    })();
-    return loading;
+  // (dashboard load, filters, parameters). A burst is merged into one load (EVENT_MERGE_MS);
+  // the chart is drawn as soon as a load finishes. Events that arrive during a load trigger
+  // one more load afterwards. A failed load is retried once; the last good chart stays on error.
+  const EVENT_MERGE_MS = 40;
+  let loading = false; let loadAgain = false; let eventTimer = 0;
+  function refresh () { clearTimeout(eventTimer); eventTimer = setTimeout(load, EVENT_MERGE_MS); }
+  async function load () {
+    if (loading) { loadAgain = true; return; }
+    loading = true; loadAgain = false;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const [data, enc] = await Promise.all([getSummaryRows(), getEncodings()]);
+        lastData = data; lastEnc = enc;
+        model = buildModel(data, enc);
+        break;
+      } catch (e) {
+        console.error(e);
+        if (loadAgain) break; // newer data is coming anyway
+        if (attempt === 0) { await new Promise((r) => setTimeout(r, 300)); continue; }
+        if (!lastData) model = { error: e.message || String(e) };
+      }
+    }
+    loading = false;
+    render();
+    if (loadAgain) load();
   }
 
   // Parameters can drive reference lines; re-draw when one changes
@@ -486,8 +490,9 @@
   const toneColor = (tone) => (tone === 'good' ? cfg.upColor : tone === 'bad' ? cfg.downColor : '#898781');
 
   // ---------------------------------------------------------------- render
+  let drawnSize = { w: 0, h: 0 };
   function render () {
-    try { renderInner(); } catch (e) {
+    try { renderInner(); const c = $('chart'); drawnSize = c.querySelector('svg') ? { w: c.clientWidth, h: c.clientHeight } : { w: 0, h: 0 }; } catch (e) {
       console.error(e);
       $('header').hidden = true; $('legend').hidden = true; $('chart').innerHTML = '';
       showEmpty('<b>Could not draw the chart.</b><br>' + escapeHtml(e.message || String(e)));

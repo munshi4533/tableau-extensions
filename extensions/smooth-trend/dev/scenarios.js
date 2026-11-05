@@ -148,3 +148,27 @@ MockTableau.scenario('profitloss', (M) => {
 });
 
 MockTableau.scenario('empty', () => ({ columns: [], data: [], encodings: [] }));
+
+MockTableau.scenario('bigdaily', (M) => {
+  // stress test: 3 years of daily data
+  const columns = ['DAY(Txn Date)', 'SUM(Transfer Amount)'];
+  const data = [];
+  for (let t = Date.UTC(2023, 9, 1), i = 0; t <= Date.UTC(2026, 9, 25); t += 864e5, i++) {
+    const d = new Date(t); const v = 40000 + i * 35 + Math.sin(i / 9) * 6000;
+    data.push([M.dv(M.iso(d), d, M.fmtDay(d)), M.dv(v, v, M.fmtMoney(v))]);
+  }
+  return { columns, data, encodings: [{ id: 'date', field: M.field(columns[0]) }, { id: 'value', field: M.field(columns[1]) }] };
+});
+
+MockTableau.scenario('biggroups', (M) => {
+  // stress test: 3 years of daily data split into 6 groups
+  const columns = ['DAY(Snap Dt)', 'dpd_bucket', 'AGG(No of Contracts)'];
+  const data = [];
+  ['DPD 0', 'DPD 1-29', 'DPD 30-59', 'DPD 60-89', 'DPD 90-179', 'DPD 180+'].forEach((g, gi) => {
+    for (let t = Date.UTC(2023, 9, 1), i = 0; t <= Date.UTC(2026, 9, 25); t += 864e5, i++) {
+      const d = new Date(t); const v = Math.round((600 - gi * 90) + Math.sin(i / 11 + gi) * 40 + i * 0.05);
+      data.push([M.dv(M.iso(d), d, M.fmtDay(d)), M.dv(g, g, g), M.dv(v, v, M.fmtInt(v))]);
+    }
+  });
+  return { columns, data, encodings: [{ id: 'date', field: M.field(columns[0]) }, { id: 'series', field: M.field(columns[1]) }, { id: 'value', field: M.field(columns[2]) }] };
+});

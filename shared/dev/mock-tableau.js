@@ -67,7 +67,8 @@
     addEventListener: (type, fn) => { if (type === 'summary-data-changed') dataListeners.push(fn); return () => {}; },
     // Pages like Tableau does. Scenarios may add types: ['string','float','int','date',...] per column.
     getSummaryDataReaderAsync: async (pageRowCount) => {
-      await wait(30);
+      window.__mockReads = (window.__mockReads || 0) + 1;
+      await wait(+params.get('latency') || 30); // ?latency=600 imitates a slow Tableau Server
       if (readerOpen) throw new Error('[mock] A summary data reader is already open. Release it before opening another.');
       readerOpen = true;
       const d = data();
