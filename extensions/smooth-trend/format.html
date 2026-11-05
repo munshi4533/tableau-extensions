@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="ext-version" content="1.8.0" />
+  <meta name="ext-version" content="1.9.0" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Format Smooth Trend</title>
-  <link rel="stylesheet" href="./format.css?v=1.8.0" />
-  <script src="../../shared/lib/tableau.extensions.1.latest.min.js?v=1.8.0"></script>
-  <script src="./format.js?v=1.8.0" defer></script>
+  <link rel="stylesheet" href="./format.css?v=1.9.0" />
+  <script src="../../shared/lib/tableau.extensions.1.latest.min.js?v=1.9.0"></script>
+  <script src="./format.js?v=1.9.0" defer></script>
 </head>
 <body>
   <form id="form" class="fx" autocomplete="off">
@@ -187,6 +187,7 @@
             <select name="valueLabels">
               <option value="none">None</option>
               <option value="minmax">High &amp; low</option>
+              <option value="last">Latest only</option>
               <option value="minmaxlast">High, low &amp; latest</option>
               <option value="all">All values</option>
             </select>
@@ -225,6 +226,16 @@
             </select>
           </label>
         </div>
+      </section>
+
+      <!-- Lines by group (only when a dimension is on Series) -->
+      <section id="seriesSection" hidden>
+        <h2>Lines by group</h2>
+        <p class="fx-hint">One card per value of the dimension on the <b>Series</b> shelf (like Tableau's Color shelf). Viewers can also click a legend item to hide or show a line.</p>
+        <label class="fx-field">Headline number shows
+          <select name="kpiSeries" id="kpiSeries"></select>
+        </label>
+        <div id="seriesCards"></div>
       </section>
 
       <!-- 7. Reference lines -->

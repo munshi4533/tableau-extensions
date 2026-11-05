@@ -42,6 +42,8 @@
     showGrid: false, // horizontal gridlines behind the line
     background: 'transparent', // transparent | white | custom
     bgColor: '#ffffff',
+    seriesStyles: {}, // per group (Series shelf): { color, style: solid|dashed|dotted, width, area, hidden }
+    kpiSeries: '', // '' = total of all groups, or a group name for the header number
     refLines: [], // reference lines: { source: fixed|calc|measure|param, value, calc, field, param, label, labelPos, color, style, width }
     yAxis: 'auto', // auto | zero | fit  (auto starts at zero unless the data sits far from zero)
     animate: true,
@@ -68,7 +70,8 @@
   let model = null;
   let lastData = null; // cached summary data, so settings changes can rebuild without re-querying
   let lastEnc = null;
-  let params = []; // Tableau parameters (for reference lines)
+  let params = [];
+  const hiddenNow = new Set(); // groups switched off by clicking the legend (this session only) // Tableau parameters (for reference lines)
   let hasAnimated = false;
   let lastHoverTuple = 0;
   let selectedTuple = 0;
@@ -299,7 +302,7 @@
       series = keep;
     }
     series.forEach((s, i) => {
-      s.color = s.other ? OTHER_COLOR : PALETTE[i % PALETTE.length];
+      s.color = (cfg.seriesStyles && cfg.seriesStyles[s.name] && cfg.seriesStyles[s.name].color) || (s.other ? OTHER_COLOR : PALETTE[i % PALETTE.length]);
       s.byKey = new Map(s.points.map((p, j) => [p.k, j]));
     });
 
@@ -549,7 +552,8 @@
   // ---------------------------------------------------------------- KPI engine (header number)
   // Returns { value, valueText, label, base, baseCaption, tooltip }
   function computeKpi () {
-    const t = model.totals;
+    const ks = !model.single && cfg.kpiSeries ? model.series.find((s0) => s0.name === cfg.kpiSeries) : null;
+    const t = ks ? ks.points.map((p) => ({ k: p.k, y: p.y, xLabel: p.xLabel })) : model.totals;
     const n = t.length;
     const last = t[n - 1];
     const time = model.xType === 'time';
@@ -578,9 +582,11 @@
       const p = t[i];
       out.value = p.y;
       out.label = mode === 'latest' ? p.xLabel : `${p.xLabel} · previous`;
-      out.tooltip = model.single ? p.xLabel : `Total of all lines, ${p.xLabel}`;
-      if (model.single && !cfg.shortNumbers) {
-        const sp = model.series[0].points.find((q) => q.k === p.k);
+      out.tooltip = model.single ? p.xLabel : ks ? `${ks.name}, ${p.xLabel}` : `Total of all lines, ${p.xLabel}`;
+      if (ks) out.label = `${ks.name} · ${out.label}`;
+      const src = model.single ? model.series[0] : ks;
+      if (src && !cfg.shortNumbers) {
+        const sp = src.points.find((q) => q.k === p.k);
         out.valueText = sp && sp.yLabel ? sp.yLabel : '';
       }
       let b = null;
@@ -667,8 +673,23 @@
     const lg = $('legend');
     if (model.single || tiny) { lg.hidden = true; return; }
     lg.hidden = false;
-    lg.innerHTML = model.series.map((s) => `<span><i style="background:${s.color}"></i>${escapeHtml(s.name)}</span>`).join('');
+    lg.innerHTML = model.series.filter((s) => !sstyle(s).hidden).map((s) => {
+      const st = sstyle(s); const d = dashFor(st.style, 2);
+      return `<span class="lg-item${hiddenNow.has(s.name) ? ' off' : ''}" data-name="${escapeHtml(s.name)}" title="Click to show / hide">` +
+        `<svg width="18" height="8"><line x1="1" x2="17" y1="4" y2="4" stroke="${s.color}" stroke-width="2.5" stroke-linecap="round"${d ? ` stroke-dasharray="${d}"` : ''}/></svg>${escapeHtml(s.name)}</span>`;
+    }).join('');
+    lg.onclick = (e) => {
+      const it = e.target.closest('[data-name]');
+      if (!it) return;
+      const n = it.dataset.name;
+      if (hiddenNow.has(n)) hiddenNow.delete(n); else hiddenNow.add(n);
+      hasAnimated = true; render();
+    };
   }
+
+  function sstyle (s) { return { style: 'solid', width: 0, area: false, hidden: false, ...((cfg.seriesStyles || {})[s.name] || {}) }; }
+  function visibleSeries () { return model.single ? model.series : model.series.filter((s) => !sstyle(s).hidden && !hiddenNow.has(s.name)); }
+  function dashFor (style, w) { return style === 'dashed' ? `${w * 3} ${w * 2.2}` : style === 'dotted' ? `0.1 ${w * 2.4}` : null; }
 
   function curveFactory () {
     switch (cfg.curve) {
@@ -684,7 +705,9 @@
     const H = chartEl.clientHeight;
     if (W < 60 || H < 50) return;
 
-    const { series, keys, xType, single } = model;
+    const { keys, xType, single } = model;
+    const series = visibleSeries();
+    if (!series.length) return;
     const refs = computeRefLines();
     const allY = [].concat(...series.map((s) => s.points.map((p) => p.y)), ...refs.map((r) => (r.points ? r.points.map((p) => p.y) : [r.value])));
     let [y0, y1] = d3.extent(allY);
@@ -806,10 +829,14 @@
       plot.append('circle').attr('cx', px(lp)).attr('cy', y(lp.y)).attr('r', lw + 2.5)
         .attr('fill', lastColor).attr('stroke', 'var(--halo)').attr('stroke-width', 2);
     } else {
-      series.forEach((s) => {
+      series.forEach((s, si) => {
+        const st = sstyle(s);
+        const sw = +st.width || (s.other ? Math.max(1.5, lw - 1) : lw);
+        if (st.area) plot.append('path').attr('class', 'st-area').attr('d', areaGen(s.points)).attr('fill', gradient(`st-g-s${si}`, s.color));
         plot.append('path').attr('class', 'st-line').attr('d', lineGen(s.points))
-          .attr('stroke', s.color).attr('stroke-width', s.other ? Math.max(1.5, lw - 1) : lw)
-          .attr('stroke-dasharray', s.other ? '4 3' : null);
+          .attr('stroke', s.color).attr('stroke-width', sw)
+          .attr('stroke-dasharray', s.other && st.style === 'solid' ? '4 3' : dashFor(st.style, sw))
+          .attr('data-dash', dashFor(st.style, sw) || '');
         if (cfg.showPoints) {
           plot.append('g').selectAll('circle').data(s.points).join('circle')
             .attr('cx', px).attr('cy', (p) => y(p.y)).attr('r', Math.max(2.5, lw))
@@ -1009,7 +1036,7 @@
       const range = (pts[hi].y - pts[lo].y) || 1;
       pts.forEach((p, i) => {
         const isHi = n > 2 && i === hi; const isLo = n > 2 && i === lo && lo !== hi; const isLast = i === n - 1;
-        const want = mode === 'all' || ((mode === 'minmax' || mode === 'minmaxlast') && (isHi || isLo)) || (mode === 'minmaxlast' && isLast);
+        const want = mode === 'all' || ((mode === 'minmax' || mode === 'minmaxlast') && (isHi || isLo)) || ((mode === 'minmaxlast' || mode === 'last') && isLast);
         if (!want) return;
         const prev = i > 0 ? pts[i - 1].y : p.y; const next = i < n - 1 ? pts[i + 1].y : p.y;
         const prominence = Math.abs(p.y - (prev + next) / 2) / range;
@@ -1078,7 +1105,8 @@
 
   // ---------------------------------------------------------------- hover, tooltip & selection
   function setupHover (g, { iw, ih, px, keyX, y }) {
-    const { keys, series } = model;
+    const { keys } = model;
+    const series = visibleSeries();
     const xs = keys.map(keyX);
     const hoverG = g.append('g').style('display', 'none');
     const cross = hoverG.append('line').attr('class', 'st-crosshair').attr('y1', 0).attr('y2', ih);
@@ -1219,6 +1247,7 @@
       rawGrain: model.rawGrain,
       hasKpiShelf: !!model.kpiShelf,
       measures: (model.measures || []).map((mm) => ({ key: mm.key, name: mm.name })),
+      series: model.single ? [] : model.series.filter((s0) => !s0.other).map((s0, i) => ({ name: s0.name, color: (cfg.seriesStyles[s0.name] || {}).color || PALETTE[i % PALETTE.length] })),
       params: params.filter((p) => p.value !== null).map((p) => p.name),
       kpiShelfNames: model.kpiShelf ? [model.kpiShelf.name, model.kpiShelf.compareName].filter(Boolean) : [],
       single: model.single,

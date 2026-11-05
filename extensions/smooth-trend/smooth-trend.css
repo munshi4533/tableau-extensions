@@ -111,3 +111,8 @@ html, body {
 .st-tt-extra { border-top: 1px solid var(--grid); margin-top: 6px; padding-top: 5px; }
 .st-tt-extra div { display: flex; justify-content: space-between; gap: 10px; color: var(--ink-2); }
 .st-tt-extra b { color: var(--ink-1); font-weight: 600; }
+
+/* legend: click a group to hide / show it */
+.st-legend .lg-item { cursor: pointer; user-select: none; }
+.st-legend .lg-item.off { opacity: .35; }
+.st-legend svg { flex: none; }

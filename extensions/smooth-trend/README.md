@@ -42,6 +42,7 @@ Smooth line trend with a KPI header, growth/degrowth coloring and smart tooltips
 Click a point to select it in Tableau (drives dashboard actions). Ctrl/Cmd-click adds to the selection.
 
 ## Version history
+- **1.9.0**: *Lines by group* (a dimension on Series works like Tableau's Color shelf): per-group color, solid/dashed/dotted, width, area fill and hide; click a legend item to show/hide a line; value labels *Latest only* (end labels); the headline number can follow one group instead of the total.
 - **1.8.0**: *Reference lines* (Format → 7): fixed number (1.5M, 25%…), calculation (average, median, min, max, first, latest), a measure on Detail/Tooltip (constant → flat line, changing per period → target line), or a Tableau parameter (updates live). Label with {value}, position, color, dashed/solid/dotted, width. The value axis always includes the lines.
 - **1.7.1**: Automatic value axis fits the data more often (e.g. −2.7M…−3.8M no longer starts at zero); "All values" labels keep one label per horizontal slot, so dense daily data stays readable.
 - **1.7.0**: better negative values. *Value axis*: Automatic (starts at zero unless that squashes the line, e.g. −3.8M…−3.6M), Always zero, or Fit to data; the area fills down to the bottom edge. *Growth means*: Automatic / value goes up / size grows (ignore the minus sign; automatic when every value is negative), so a growing overdraft shows ▲ and, with Higher is better ticked, in red.

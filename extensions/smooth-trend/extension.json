@@ -1,7 +1,7 @@
 {
   "name": "Smooth Trend",
   "manifestName": "SmoothTrend",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "Smooth line trend with a KPI header (latest, MTD, QTD, YTD or your own calculation), growth/degrowth coloring and smart tooltips.",
   "entry": "index.html",
   "icon": "icon.png",
@@ -24,7 +24,7 @@
       "id": "series", "name": "Series",
       "roles": ["discrete-dimension"],
       "maxCount": 1, "icon": "color",
-      "tooltip": "Optional. A dimension that splits the trend into several lines (up to 8; the rest are grouped as Other)."
+      "tooltip": "Optional. A dimension that splits the trend into several lines (up to 8; the rest are grouped as Other), like the Color shelf. Style each line in Format → Lines by group."
     },
     {
       "id": "kpi", "name": "KPI",

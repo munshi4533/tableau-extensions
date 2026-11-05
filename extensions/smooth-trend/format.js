@@ -31,8 +31,11 @@
     cfg = { ...DEFAULTS, ...saved };
 
     cfg.refLines = Array.isArray(cfg.refLines) ? cfg.refLines.map((r) => ({ ...r })) : [];
+    cfg.seriesStyles = JSON.parse(JSON.stringify(cfg.seriesStyles || {}));
+    setupSeries();
     fill();
     drawRefs();
+    drawSeries();
     refreshUi();
 
     form.addEventListener('input', () => { read(); refreshUi(); scheduleSave(); });
@@ -44,7 +47,7 @@
       try { await tableau.extensions.settings.saveAsync(); } catch (e) { /* ignore */ }
       tableau.extensions.ui.closeDialog('cancel');
     });
-    $('reset').addEventListener('click', () => { cfg = { ...DEFAULTS, refLines: [] }; fill(); drawRefs(); refreshUi(); scheduleSave(); });
+    $('reset').addEventListener('click', () => { cfg = { ...DEFAULTS, refLines: [], seriesStyles: {} }; fill(); drawRefs(); drawSeries(); refreshUi(); scheduleSave(); });
     $('addRef').addEventListener('click', () => {
       const hasMeasure = (ctx.measures || []).length;
       cfg.refLines.push({ source: hasMeasure ? 'measure' : 'calc', calc: 'avg', field: hasMeasure ? ctx.measures[0].key : '', param: (ctx.params || [])[0] || '', value: '', label: '', labelPos: 'right', color: '#52514e', style: 'dashed', width: '1.5' });
@@ -61,6 +64,40 @@
       if (!d) return;
       cfg.refLines.splice(+d.dataset.del, 1); drawRefs(); scheduleSave();
     });
+  }
+
+  // ------------------------------------------------------------ lines by group (Series shelf)
+  function setupSeries () {
+    const list = ctx.series || [];
+    $('seriesSection').hidden = !list.length;
+    if (!list.length) return;
+    $('kpiSeries').innerHTML = `<option value="">Total of all groups</option>` + list.map((x) => `<option value="${esc(x.name)}">${esc(x.name)}</option>`).join('');
+    $('seriesCards').addEventListener('input', (e) => {
+      const el = e.target; const card = el.closest('[data-n]');
+      if (!card || !el.dataset.f) return;
+      const n = card.dataset.n;
+      const st = cfg.seriesStyles[n] = { ...(cfg.seriesStyles[n] || {}) };
+      st[el.dataset.f] = el.type === 'checkbox' ? el.checked : (el.dataset.f === 'width' ? +el.value : el.value);
+      if (el.dataset.f === 'hidden') card.classList.toggle('off', el.checked);
+    });
+  }
+  function drawSeries () {
+    const list = ctx.series || [];
+    if (!list.length) return;
+    $('seriesCards').innerHTML = list.map((x) => {
+      const st = { style: 'solid', width: 0, area: false, hidden: false, color: x.color, ...(cfg.seriesStyles[x.name] || {}) };
+      return `<div class="ref${st.hidden ? ' off' : ''}" data-n="${esc(x.name)}">
+        <div class="row">
+          <label class="fx-color"><input type="color" data-f="color" value="${esc(st.color)}"> <b>${esc(x.name)}</b></label>
+          <label class="fx-check" style="margin-left:auto"><input type="checkbox" data-f="hidden" ${st.hidden ? 'checked' : ''}> Hide</label>
+        </div>
+        <div class="row">
+          <label class="fx-field">Line style<select data-f="style">${opts([['solid', 'Solid ———'], ['dashed', 'Dashed – – –'], ['dotted', 'Dotted · · ·']], st.style)}</select></label>
+          <label class="fx-field">Width<select data-f="width">${opts([['0', 'Same as line'], ['1', '1'], ['1.5', '1.5'], ['2', '2'], ['2.5', '2.5'], ['3', '3'], ['4', '4']], st.width)}</select></label>
+          <label class="fx-check"><input type="checkbox" data-f="area" ${st.area ? 'checked' : ''}> Area</label>
+        </div>
+      </div>`;
+    }).join('');
   }
 
   // ------------------------------------------------------------ reference lines

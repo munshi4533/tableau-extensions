@@ -48,6 +48,22 @@ MockTableau.scenario('daily', (M) => {
   return { columns, data, encodings: [{ id: 'date', field: M.field(columns[0]) }, { id: 'value', field: M.field(columns[1]) }] };
 });
 
+MockTableau.scenario('dpd', (M) => {
+  // like Tableau's Color shelf: dpd_bucket splits the count into two lines; DPD 180+ starts later
+  const columns = ['DAY(Snap Dt)', 'dpd_bucket', 'AGG(No of Contracts)'];
+  const data = [];
+  for (let t = Date.UTC(2026, 6, 1), i = 0; t <= Date.UTC(2026, 9, 24); t += 864e5, i++) {
+    const d = new Date(t);
+    const a = Math.round(30 + i * 0.28 + Math.sin(i / 6) * 4);
+    data.push([M.dv(M.iso(d), d, M.fmtDay(d)), M.dv('DPD 90-179', 'DPD 90-179', 'DPD 90-179'), M.dv(a, a, M.fmtInt(a))]);
+    if (i >= 40) {
+      const b = Math.round(4 + (i - 40) * 0.17 + Math.cos(i / 5) * 1.5);
+      data.push([M.dv(M.iso(d), d, M.fmtDay(d)), M.dv('DPD 180+', 'DPD 180+', 'DPD 180+'), M.dv(b, b, M.fmtInt(b))]);
+    }
+  }
+  return { columns, data, encodings: [{ id: 'date', field: M.field(columns[0]) }, { id: 'series', field: M.field(columns[1]) }, { id: 'value', field: M.field(columns[2]) }] };
+});
+
 MockTableau.scenario('monthraw', (M) => {
   // monthly data on an exact-date pill: Tableau formats it as a full date
   let v = 152000;
