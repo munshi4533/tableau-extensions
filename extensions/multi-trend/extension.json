@@ -1,0 +1,24 @@
+{
+  "name": "Multi Measure Trend",
+  "manifestName": "MultiTrend",
+  "version": "1.0.0",
+  "description": "Several measures over time on one chart. Each measure can be a solid, dashed or dotted line, an area or bars, with its own color and axis, plus a tooltip comparing them.",
+  "entry": "index.html",
+  "icon": "icon.png",
+  "formatDialog": true,
+  "previewPages": ["index.html", "format.html"],
+  "encodings": [
+    {
+      "id": "date", "name": "Date",
+      "roles": ["continuous-dimension", "discrete-dimension"],
+      "maxCount": 1, "icon": "letter-x",
+      "tooltip": "A date or period: MONTH(Date), DAY(Date), or a discrete period. Every measure is plotted against it."
+    },
+    {
+      "id": "measures", "name": "Measures",
+      "dataType": "numeric", "roles": ["continuous-measure"],
+      "maxCount": 10, "icon": "metric",
+      "tooltip": "One or more measures or calculations, each becomes its own line, area or bars. Style each one in Format Extension → Measures."
+    }
+  ]
+}

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base href="../" />
+  <!-- GENERATED preview (tools/build.py): sample data instead of Tableau -->
+  <meta charset="utf-8" />
+  <meta name="ext-version" content="1.0.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Format Multi Measure Trend (preview)</title>
+  <link rel="stylesheet" href="./format.css?v=1.0.0" />
+  <script>window.tableau = window.parent.__mockDialogTableau;</script>
+  <script src="./format.js?v=1.0.0" defer></script>
+</head>
+<body>
+  <form id="form" class="fx" autocomplete="off">
+    <header class="fx-top">
+      <h1>Format Multi Measure Trend</h1>
+      <p>Changes preview live on the sheet.</p>
+      <nav class="fx-tabs" id="tabs">
+        <button type="button" data-tab="measures" class="on">Measures</button>
+        <button type="button" data-tab="chart">Chart</button>
+      </nav>
+    </header>
+
+    <main class="fx-body">
+      <div class="fx-tab" data-pane="measures">
+        <p class="fx-hint">One card per measure on the Measures shelf. Change the order by dragging the pills on the shelf in Tableau.</p>
+        <div id="measures"></div>
+      </div>
+
+      <div class="fx-tab" data-pane="chart" hidden>
+        <section>
+          <h2>Header &amp; legend</h2>
+          <label class="fx-check"><input type="checkbox" name="showHeader" /> Show title</label>
+          <label class="fx-field">Title <input type="text" name="title" placeholder="Automatic (Measure A vs Measure B)" /></label>
+          <div class="fx-grid">
+            <label class="fx-field">Subtitle
+              <select name="subtitle"><option value="range">Date range</option><option value="none">None</option></select>
+            </label>
+            <label class="fx-field">Legend
+              <select name="legend"><option value="top">Top</option><option value="bottom">Bottom</option><option value="none">None</option></select>
+            </label>
+          </div>
+          <label class="fx-check"><input type="checkbox" name="legendValues" /> Show the latest value next to each name</label>
+        </section>
+        <section>
+          <h2>Axes</h2>
+          <div class="fx-grid">
+            <label class="fx-field">Value axis
+              <select name="yAxis"><option value="auto">Automatic</option><option value="zero">Always start at zero</option><option value="fit">Fit to the data</option></select>
+            </label>
+            <label class="fx-field">Date labels
+              <select name="dateFormat">
+                <option value="auto">Automatic</option><option value="tableau">As formatted in Tableau</option>
+                <option value="mmm-yyyy">Jan 2025</option><option value="mmmm-yyyy">January 2025</option><option value="yyyy-mm">2025-01</option>
+                <option value="dd-mmm-yyyy">15 Jan 2025</option><option value="yyyy">2025</option>
+              </select>
+            </label>
+            <label class="fx-field">Left axis title <input type="text" name="leftTitle" placeholder="None" /></label>
+            <label class="fx-field">Right axis title <input type="text" name="rightTitle" placeholder="None" /></label>
+          </div>
+          <label class="fx-check"><input type="checkbox" name="showGrid" /> Gridlines</label>
+          <p class="fx-hint">Bars always start at zero. Measures set to "Right axis" in their card get their own scale.</p>
+        </section>
+        <section>
+          <h2>Tooltip</h2>
+          <div class="fx-grid">
+            <label class="fx-field">Style
+              <select name="tooltipMode"><option value="custom">Smart tooltip (all measures)</option><option value="tableau">Tableau tooltip</option><option value="off">Off</option></select>
+            </label>
+            <label class="fx-field">Compare each value with
+              <select name="tooltipCompare"><option value="previous">The previous period</option><option value="first">The first measure</option><option value="none">Nothing</option></select>
+            </label>
+          </div>
+          <label class="fx-check"><input type="checkbox" name="higherIsBetter" /> Higher is better <small>(green ▲ when up)</small></label>
+          <p class="fx-hint">Fields on Tableau's Tooltip (or Detail) tile are added at the bottom of the tooltip.</p>
+        </section>
+        <section>
+          <h2>Text sizes</h2>
+          <div class="fx-grid">
+            <label class="fx-field">Title<select name="titleSize"><option>12</option><option>13</option><option>14</option><option>16</option><option>18</option><option>20</option><option>24</option></select></label>
+            <label class="fx-field">Legend &amp; subtitle<select name="legendSize"><option>10</option><option>11</option><option>12</option><option>13</option><option>14</option><option>16</option></select></label>
+            <label class="fx-field">Value labels<select name="labelSize"><option>9</option><option>10</option><option>11</option><option>12</option><option>13</option><option>14</option></select></label>
+            <label class="fx-field">Date axis<select name="xAxisSize"><option>9</option><option>10</option><option>11</option><option>12</option><option>13</option><option>14</option></select></label>
+            <label class="fx-field">Value axis<select name="yAxisSize"><option>9</option><option>10</option><option>11</option><option>12</option><option>13</option><option>14</option></select></label>
+          </div>
+        </section>
+        <section>
+          <h2>Look</h2>
+          <div class="fx-grid">
+            <label class="fx-field">Background
+              <select name="background"><option value="transparent">Transparent</option><option value="white">White</option><option value="custom">Custom color</option></select>
+            </label>
+            <label class="fx-color" id="bgColorField">Color <input type="color" name="bgColor" /></label>
+          </div>
+          <label class="fx-check"><input type="checkbox" name="animate" /> Draw-in animation</label>
+        </section>
+      </div>
+    </main>
+
+    <footer class="fx-foot">
+      <button type="button" id="reset" class="fx-btn ghost">Reset to defaults</button>
+      <span class="fx-spacer"></span>
+      <button type="button" id="cancel" class="fx-btn ghost">Cancel</button>
+      <button type="button" id="ok" class="fx-btn primary">OK</button>
+    </footer>
+  </form>
+</body>
+</html>

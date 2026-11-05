@@ -1,0 +1,73 @@
+/* Multi Measure Trend – Tableau Viz Extension */
+:root {
+  --surface: transparent;
+  --halo: transparent;
+  --ink-1: #0b0b0b;
+  --ink-2: #52514e;
+  --ink-3: #898781;
+  --grid: #ebeae4;
+  --axis: #c3c2b7;
+  --border: rgba(11, 11, 11, 0.10);
+  --good-text: #006300;
+  --bad-text: #b02a2a;
+  --title-size: 14px;
+  --legend-size: 11px;
+  --x-size: 10px;
+  --y-size: 10px;
+  --label-size: 10px;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0; height: 100%; width: 100%; overflow: hidden;
+  background: var(--surface); color: var(--ink-1);
+  font-family: "Benton Sans", "Tableau Book", -apple-system, "Segoe UI", Roboto, Arial, sans-serif; font-size: 12px;
+}
+.mt-root { position: fixed; inset: 0; display: flex; flex-direction: column; padding: 8px 12px 6px; }
+
+.mt-header { padding-bottom: 4px; }
+.mt-header[hidden] { display: none; }
+.mt-title { font-size: var(--title-size); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mt-subtitle { font-size: var(--legend-size); color: var(--ink-3); margin-top: 2px; }
+.mt-subtitle:empty { display: none; }
+
+.mt-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; padding: 2px 0 6px; font-size: var(--legend-size); color: var(--ink-2); }
+.mt-legend.bottom { padding: 6px 0 0; justify-content: center; }
+.mt-legend[hidden] { display: none; }
+.mt-legend .item { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
+.mt-legend .item.off { opacity: .35; }
+.mt-legend .item b { color: var(--ink-1); font-weight: 600; font-variant-numeric: tabular-nums; }
+.mt-legend svg { flex: none; }
+
+.mt-chart { position: relative; flex: 1 1 auto; min-height: 60px; }
+.mt-chart svg { display: block; overflow: visible; }
+.mt-chart .tick text { fill: var(--ink-3); font-size: var(--y-size); font-family: inherit; }
+.mt-chart .mt-xaxis .tick text { font-size: var(--x-size); }
+.mt-chart .tick line { stroke: var(--grid); }
+.mt-chart .domain { stroke: var(--axis); }
+.mt-chart .mt-axis-title { fill: var(--ink-3); font-size: var(--y-size); }
+.mt-chart .mt-line { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.mt-chart .mt-cross { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 3; pointer-events: none; }
+.mt-chart .mt-dot { stroke: var(--halo); stroke-width: 2; pointer-events: none; }
+.mt-chart .mt-label { font-size: var(--label-size); font-weight: 600; paint-order: stroke; stroke: var(--halo); stroke-width: 3px; }
+.mt-chart .mt-overlay { fill: transparent; cursor: crosshair; }
+
+.mt-empty { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: var(--ink-2); padding: 20px; line-height: 1.5; }
+.mt-empty[hidden] { display: none; }
+.mt-empty b { color: var(--ink-1); }
+
+.mt-tooltip {
+  position: fixed; z-index: 20; pointer-events: none; background: #fff; border: 1px solid var(--border); border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.10); padding: 8px 10px; min-width: 190px; max-width: 340px; font-size: 11px; color: var(--ink-1);
+}
+.mt-tooltip[hidden] { display: none; }
+.mt-tt-head { font-weight: 600; margin-bottom: 6px; }
+.mt-tt-row { display: grid; grid-template-columns: 22px 1fr auto; align-items: center; gap: 2px 6px; padding: 2px 0; }
+.mt-tt-name { color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mt-tt-val { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+.mt-tt-delta { grid-column: 2 / span 2; text-align: right; font-size: 10px; font-variant-numeric: tabular-nums; }
+.mt-tt-delta.good { color: var(--good-text); }
+.mt-tt-delta.bad { color: var(--bad-text); }
+.mt-tt-delta.flat { color: var(--ink-3); }
+.mt-tt-extra { border-top: 1px solid var(--grid); margin-top: 6px; padding-top: 5px; }
+.mt-tt-extra div { display: flex; justify-content: space-between; gap: 10px; color: var(--ink-2); }
+.mt-tt-extra b { color: var(--ink-1); }

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="ext-version" content="1.0.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Multi Measure Trend</title>
+  <link rel="stylesheet" href="./multi-trend.css?v=1.0.0" />
+  <script src="../../shared/lib/d3.v7.min.js?v=1.0.0"></script>
+  <script src="../../shared/lib/tableau.extensions.1.latest.min.js?v=1.0.0"></script>
+  <script src="../../shared/context-menu.js?v=1.0.0"></script>
+  <script src="./multi-trend.js?v=1.0.0" defer></script>
+</head>
+<body>
+  <div id="app" class="mt-root">
+    <header id="header" class="mt-header" hidden>
+      <div id="title" class="mt-title"></div>
+      <div id="subtitle" class="mt-subtitle"></div>
+    </header>
+    <div id="legend" class="mt-legend" hidden></div>
+    <div id="chart" class="mt-chart"></div>
+    <div id="legendBottom" class="mt-legend bottom" hidden></div>
+    <div id="empty" class="mt-empty" hidden></div>
+    <div id="tooltip" class="mt-tooltip" role="tooltip" hidden></div>
+  </div>
+</body>
+</html>
