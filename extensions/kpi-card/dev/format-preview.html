@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base href="../" />
+  <!-- GENERATED preview (tools/build.py): sample data instead of Tableau -->
+  <meta charset="utf-8" />
+  <meta name="ext-version" content="1.0.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Format KPI Card (preview)</title>
+  <link rel="stylesheet" href="./format.css?v=1.0.0" />
+  <script>window.tableau = window.parent.__mockDialogTableau;</script>
+  <script src="./kpi-formula.js?v=1.0.0"></script>
+  <script src="./format.js?v=1.0.0" defer></script>
+</head>
+<body>
+  <form id="form" class="fx" autocomplete="off">
+    <header class="fx-top">
+      <h1>Format KPI Card</h1>
+      <p>Changes preview live on the sheet.</p>
+      <nav class="fx-tabs" id="tabs">
+        <button type="button" data-tab="cards" class="on">Cards</button>
+        <button type="button" data-tab="number">Big number</button>
+        <button type="button" data-tab="look">Look</button>
+      </nav>
+    </header>
+
+    <main class="fx-body">
+      <div class="fx-tab" data-pane="cards">
+        <div class="fx-help">
+          <b>Combine days</b> tells each measure how to turn daily values into MTD / last month: <b>Sum</b> for amounts and counts, <b>Latest value</b> for balances.
+          <b>Calculated KPIs</b> roll up each part first, then calculate, e.g. Average Loan Size = <code>[Loan Amount] / [Loans]</code>.
+        </div>
+        <div id="cards"></div>
+        <button type="button" id="addCalc" class="fx-btn ghost add">+ Calculated KPI</button>
+      </div>
+
+      <div class="fx-tab" data-pane="number" hidden>
+        <section>
+          <h2>Big number</h2>
+          <div class="fx-grid">
+            <label class="fx-field">Show
+              <select name="period"><option value="day">Last day</option><option value="mtd">Month to date (MTD)</option><option value="lastmonth">Last month (full)</option></select>
+            </label>
+            <label class="fx-field">Compare with
+              <select name="compare"><option value="auto">Automatic (prev. day · LMTD · prev. month)</option><option value="yoy">Same period last year</option><option value="none">Nothing</option></select>
+            </label>
+          </div>
+          <p class="fx-hint" id="periodHint">All cards use this unless a card picks its own. "Last day" is the latest date in the data; MTD runs from the 1st to that date and is compared with the same days of last month (LMTD).</p>
+          <label class="fx-check"><input type="checkbox" name="switcher" /> Viewer buttons: Last day / MTD / Last month <small>(switch every card at once)</small></label>
+        </section>
+        <section>
+          <h2>Under the number</h2>
+          <label class="fx-check"><input type="checkbox" name="showRange" /> Period and dates (MTD · 1–8 Nov 2026)</label>
+          <label class="fx-check"><input type="checkbox" name="secondary" /> The other periods as small values</label>
+          <label class="fx-check"><input type="checkbox" name="progress" /> Target progress bar <small>(cards with a target)</small></label>
+          <label class="fx-field">Mini trend line
+            <select name="sparkline"><option value="auto">Automatic</option><option value="months">Month by month (12 months)</option><option value="days">Day by day (30 days)</option><option value="none">None</option></select>
+          </label>
+          <p class="fx-hint">Month by month is like for like: with MTD each month covers the same days (1st–8th), with Last month full months.</p>
+        </section>
+      </div>
+
+      <div class="fx-tab" data-pane="look" hidden>
+        <section>
+          <h2>Layout</h2>
+          <label class="fx-field">Title <input type="text" name="title" placeholder="None" /></label>
+          <div class="fx-grid">
+            <label class="fx-field">Cards per row
+              <select name="columns"><option value="auto">Automatic</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select>
+            </label>
+            <label class="fx-field">Card style
+              <select name="cardStyle"><option value="card">Card with color bar</option><option value="plain">Plain (no box)</option></select>
+            </label>
+            <label class="fx-field">Align
+              <select name="align"><option value="left">Left</option><option value="center">Center</option></select>
+            </label>
+          </div>
+        </section>
+        <section>
+          <h2>Text sizes</h2>
+          <div class="fx-grid">
+            <label class="fx-field">Big number<select name="valueSize"><option value="0">Fit to card</option><option>20</option><option>24</option><option>28</option><option>32</option><option>36</option><option>40</option><option>48</option></select></label>
+            <label class="fx-field">Card name<select name="labelSize"><option>10</option><option>11</option><option>12</option><option>13</option><option>14</option><option>16</option></select></label>
+            <label class="fx-field">Details<select name="detailSize"><option>9</option><option>10</option><option>11</option><option>12</option><option>13</option></select></label>
+          </div>
+        </section>
+        <section>
+          <h2>Background</h2>
+          <div class="fx-grid">
+            <label class="fx-field">Background
+              <select name="background"><option value="transparent">Transparent (white cards)</option><option value="white">White</option><option value="custom">Custom color</option></select>
+            </label>
+            <label class="fx-color" id="bgColorField">Color <input type="color" name="bgColor" /></label>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="fx-foot">
+      <button type="button" id="reset" class="fx-btn ghost">Reset to defaults</button>
+      <span class="fx-spacer"></span>
+      <button type="button" id="cancel" class="fx-btn ghost">Cancel</button>
+      <button type="button" id="ok" class="fx-btn primary">OK</button>
+    </footer>
+  </form>
+</body>
+</html>
