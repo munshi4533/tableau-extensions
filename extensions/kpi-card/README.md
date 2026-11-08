@@ -21,6 +21,8 @@ A row of KPI cards from a **plain date** and **your measures**. The extension wo
 - **Last day** is the latest date in the data that has a value for the cards shown. A target table running into the future doesn't move it.
 - **MTD** runs from the 1st of that month to the last day and is compared with **LMTD**, the same days of last month.
 - **Last month** is the full previous month, compared with the month before.
+- **YTD** runs from 1 January to the last day and is compared with **LYTD**, the same days last year. A fixed monthly target becomes monthly × 12, with a pace marker.
+- A comparison is only shown when the data covers the whole comparison period (e.g. LYTD needs data from 1 January last year).
 - **Calculated KPI, MTD Average Loan Size:** `sum(Loan Amount, 1st–8th) ÷ sum(Loans, 1st–8th)`, not an average of daily averages.
 - **Formula functions:** `SUM(x)` (accepted, has no effect), `ABS`, `MIN`, `MAX`, `ROUND(x, digits)`, `ZN(x)` (empty → 0), `IFNULL(x, y)`, `DAYS()` (days with data in the period, e.g. `[Loan Amount] / DAYS()` = average per day). Dividing by zero shows "–".
 - **Targets:**
@@ -34,6 +36,7 @@ A row of KPI cards from a **plain date** and **your measures**. The extension wo
 - If the date is at **MONTH** level, the periods become *This month* and *Last month*.
 
 ## Version history
+- **1.2.0**: YTD (year to date) as a big-number period and viewer button, compared with LYTD (same days last year); YTD trend line shows the year building up month by month. Viewer buttons can be hidden (Format → Big number).
 - **1.1.1**: The mini trend line fills the space under the numbers (it was capped small); size option Fill / Large / Medium / Small.
 - **1.1.0**: Choose how much history the mini trend line shows: months (3–36) and days (7–365), in Format → Big number.
 - **1.0.0**: First release.

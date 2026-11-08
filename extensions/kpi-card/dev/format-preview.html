@@ -4,13 +4,13 @@
   <base href="../" />
   <!-- GENERATED preview (tools/build.py): sample data instead of Tableau -->
   <meta charset="utf-8" />
-  <meta name="ext-version" content="1.1.1" />
+  <meta name="ext-version" content="1.2.0" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Format KPI Card (preview)</title>
-  <link rel="stylesheet" href="./format.css?v=1.1.1" />
+  <link rel="stylesheet" href="./format.css?v=1.2.0" />
   <script>window.tableau = window.parent.__mockDialogTableau;</script>
-  <script src="./kpi-formula.js?v=1.1.1"></script>
-  <script src="./format.js?v=1.1.1" defer></script>
+  <script src="./kpi-formula.js?v=1.2.0"></script>
+  <script src="./format.js?v=1.2.0" defer></script>
 </head>
 <body>
   <form id="form" class="fx" autocomplete="off">
@@ -39,14 +39,14 @@
           <h2>Big number</h2>
           <div class="fx-grid">
             <label class="fx-field">Show
-              <select name="period"><option value="day">Last day</option><option value="mtd">Month to date (MTD)</option><option value="lastmonth">Last month (full)</option></select>
+              <select name="period"><option value="day">Last day</option><option value="mtd">Month to date (MTD)</option><option value="lastmonth">Last month (full)</option><option value="ytd">Year to date (YTD)</option></select>
             </label>
             <label class="fx-field">Compare with
-              <select name="compare"><option value="auto">Automatic (prev. day · LMTD · prev. month)</option><option value="yoy">Same period last year</option><option value="none">Nothing</option></select>
+              <select name="compare"><option value="auto">Automatic (prev. day · LMTD · prev. month · LYTD)</option><option value="yoy">Same period last year</option><option value="none">Nothing</option></select>
             </label>
           </div>
-          <p class="fx-hint" id="periodHint">All cards use this unless a card picks its own. "Last day" is the latest date in the data; MTD runs from the 1st to that date and is compared with the same days of last month (LMTD).</p>
-          <label class="fx-check"><input type="checkbox" name="switcher" /> Viewer buttons: Last day / MTD / Last month <small>(switch every card at once)</small></label>
+          <p class="fx-hint" id="periodHint">All cards use this unless a card picks its own. "Last day" is the latest date in the data; MTD runs from the 1st to that date and is compared with the same days of last month (LMTD). YTD runs from 1 January and is compared with the same days last year (LYTD).</p>
+          <label class="fx-check"><input type="checkbox" name="switcher" /> Viewer buttons: Last day / MTD / Last month / YTD <small>(switch every card at once; untick to hide them)</small></label>
         </section>
         <section>
           <h2>Under the number</h2>

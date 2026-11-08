@@ -15,7 +15,7 @@
   const PALETTE = ['#2a78d6', '#eb6834', '#1baf7a', '#6250d6', '#eda100', '#e87ba4', '#008300', '#e34948'];
   const DAY = 864e5;
   const DEFAULTS = {
-    period: 'mtd', // day | mtd | lastmonth  (default big number for all cards)
+    period: 'mtd', // day | mtd | lastmonth | ytd  (default big number for all cards)
     switcher: true, // buttons so viewers can switch every card at once
     compare: 'auto', // auto (previous day / LMTD / previous month) | yoy | none
     title: '',
@@ -215,13 +215,13 @@
   function shiftMonths (t, n) { const [y, m, d] = ymd(t); return Date.UTC(y, m + n, Math.min(d, daysIn(y, m + n))); }
 
   function availablePeriods () {
-    if (model.grain === 'day') return ['day', 'mtd', 'lastmonth'];
-    if (model.grain === 'month') return ['day', 'lastmonth'];
-    return ['day'];
+    if (model.grain === 'day') return ['day', 'mtd', 'lastmonth', 'ytd'];
+    if (model.grain === 'month') return ['day', 'lastmonth', 'ytd'];
+    return ['day', 'ytd'];
   }
   function periodLabel (p) {
     if (p === 'day') return model.grain === 'day' ? 'Last day' : model.grain === 'month' ? 'This month' : `Latest ${model.grain}`;
-    return p === 'mtd' ? 'MTD' : 'Last month';
+    return p === 'mtd' ? 'MTD' : p === 'ytd' ? 'YTD' : 'Last month';
   }
   function effectivePeriod (c) {
     const av = availablePeriods();
@@ -233,9 +233,16 @@
     const D = model.latest; const [y, m] = ymd(D);
     if (p === 'mtd') return [monthStart(y, m), D];
     if (p === 'lastmonth') return [monthStart(y, m - 1), monthStart(y, m) - 1];
+    if (p === 'ytd') return [Date.UTC(y, 0, 1), D];
     return [D, D];
   }
+  // the comparison period must be fully inside the data, otherwise "+4,000% vs LYTD" from a half-covered period
   function compareOf (p, range) {
+    const cmp = compareRaw(p, range);
+    if (!cmp || cmp.range[0] < model.dates[0]) return null;
+    return cmp;
+  }
+  function compareRaw (p, range) {
     if (cfg.compare === 'none') return null;
     if (cfg.compare === 'yoy') return { range: [shiftMonths(range[0], -12), shiftMonths(range[1], -12)], caption: 'vs last year' };
     const D = model.latest; const [y, m, d] = ymd(D);
@@ -246,6 +253,7 @@
       return { range: [P, P], caption: model.grain === 'day' ? 'vs previous day' : `vs previous ${model.grain}` };
     }
     if (p === 'mtd') return { range: [monthStart(y, m - 1), Date.UTC(y, m - 1, Math.min(d, daysIn(y, m - 1)))], caption: 'vs LMTD' };
+    if (p === 'ytd') return { range: [Date.UTC(y - 1, 0, 1), shiftMonths(D, -12)], caption: 'vs LYTD' }; // same days last year
     return { range: [monthStart(y, m - 2), monthStart(y, m - 1) - 1], caption: 'vs previous month' };
   }
   function fmtRange ([a, b]) {
@@ -297,8 +305,9 @@
       const [y, m, d] = ymd(model.latest);
       // amounts that build up over the month (Sum) are paced; balances, averages and ratios are compared as they are
       const builds = card.kind === 'measure' && c.rollup === 'sum';
-      if (builds && p === 'day' && model.grain === 'day') { T = monthly / daysIn(y, m); caption = 'Daily target (monthly ÷ days)'; } else { T = monthly; caption = builds ? 'Monthly target' : 'Target'; }
+      if (builds && p === 'day' && model.grain === 'day') { T = monthly / daysIn(y, m); caption = 'Daily target (monthly ÷ days)'; } else if (builds && p === 'ytd') { T = monthly * 12; caption = 'Annual target (monthly × 12)'; } else { T = monthly; caption = builds ? 'Monthly target' : 'Target'; }
       if (builds && p === 'mtd') pace = d / daysIn(y, m);
+      if (builds && p === 'ytd') { const doy = (model.latest - Date.UTC(y, 0, 1)) / DAY + 1; pace = doy / (Date.UTC(y + 1, 0, 1) - Date.UTC(y, 0, 1)) * DAY; }
     } else if (c.targetType === 'measure') {
       const m = model.measures.find((x) => x.key === c.targetKey);
       if (!m) return null;
@@ -322,6 +331,14 @@
     } else {
       // month by month, like for like: MTD -> the same days of every month (1st–8th), Last month -> full months
       const [y, m, d] = ymd(model.latest);
+      if (p === 'ytd' && m > 0) { // YTD: how the year built up, month by month (Jan, Jan–Feb, … Jan–today)
+        for (let i = 0; i <= m; i++) {
+          const b = i === m ? model.latest : monthStart(y, i + 1) - 1;
+          pts.push({ t: monthStart(y, i), v: valueOf(card, c, [Date.UTC(y, 0, 1), b]), label: `YTD to ${fmtRange([b, b])}` });
+        }
+        const okY = pts.filter((q) => q.v !== null);
+        return okY.length > 1 ? { pts: okY, mode: 'ytd' } : null;
+      }
       const last = p === 'lastmonth' ? 1 : 0;
       const nm = Math.max(2, +cfg.sparkMonths || 12);
       for (let i = nm - 1 + last; i >= last; i--) {

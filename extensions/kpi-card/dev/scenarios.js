@@ -43,3 +43,9 @@ MockTableau.scenario('monthly', (M) => {
 });
 
 MockTableau.scenario('empty', () => ({ columns: [], data: [], encodings: [] }));
+
+MockTableau.scenario('twoYears', (M) => {
+  // two years of history, so YTD can be compared with LYTD
+  const data = loanDays(M, Date.UTC(2024, 10, 1), Date.UTC(2026, 10, 8));
+  return { columns: LOAN_COLS, data, encodings: [{ id: 'date', field: M.field(LOAN_COLS[0]) }, ...LOAN_COLS.slice(1).map((c) => ({ id: 'measures', field: M.field(c) }))] };
+});

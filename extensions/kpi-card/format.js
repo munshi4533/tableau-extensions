@@ -134,7 +134,7 @@
         ${isCalc ? `<div class="row"><label class="fx-field wide">Formula<input type="text" class="formula" data-f="formula" value="${esc(c.formula)}" placeholder="[Loan Amount] / [Loans]"></label></div>
           <div class="fstat ${st.ok ? 'ok' : 'err'}">${esc(st.text)}</div>${chips}` : (/^(CNTD|COUNTD)\(/i.test(card.m.key) ? '<p class="fx-hint warn">Distinct counts can\'t be added across days (the same customer counts every day). Use "Latest value", or an MTD calculation in Tableau.</p>' : '')}
         <div class="row">
-          <label class="fx-field">Big number<select data-f="period">${opts([['', 'As set in Big number tab'], ['day', 'Last day'], ['mtd', 'MTD'], ['lastmonth', 'Last month']], c.period)}</select></label>
+          <label class="fx-field">Big number<select data-f="period">${opts([['', 'As set in Big number tab'], ['day', 'Last day'], ['mtd', 'MTD'], ['lastmonth', 'Last month'], ['ytd', 'YTD']], c.period)}</select></label>
           <label class="fx-field">Good direction<select data-f="better">${opts([['up', 'Higher is better'], ['down', 'Lower is better'], ['none', 'Neutral (no colors)']], c.better)}</select></label>
         </div>
         <details${c.format !== 'auto' || c.prefix || c.suffix || c.decimals !== 'auto' || c.targetType !== 'none' ? ' open' : ''}>
@@ -151,7 +151,7 @@
             ${c.targetType === 'measure' ? `<label class="fx-field">Target measure<select data-f="targetKey">${opts([['', 'Pick a measure…'], ...measureOpts], c.targetKey)}</select></label>` : ''}
             ${c.targetType === 'formula' ? `<label class="fx-field wide">Target formula<input type="text" class="formula" data-f="targetFormula" value="${esc(c.targetFormula)}" placeholder="[Target Amount] * 1.1"></label>` : ''}
           </div>
-          ${c.targetType === 'fixed' ? '<p class="fx-hint">MTD shows progress toward the full month with a marker for where you should be today; Last day uses the monthly target ÷ days in the month.</p>' : ''}
+          ${c.targetType === 'fixed' ? '<p class="fx-hint">MTD shows progress toward the full month with a marker for where you should be today; Last day uses the monthly target ÷ days in the month; YTD uses monthly × 12.</p>' : ''}
           ${c.targetType === 'measure' ? '<p class="fx-hint">The target measure is rolled up over the same days (e.g. MTD target to date). Hide its own card if you don\'t want to see it.</p>' : ''}
         </details>
       </div>`;
