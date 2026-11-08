@@ -21,6 +21,9 @@
     title: '',
     columns: 'auto', // auto | 1..6
     sparkline: 'auto', // auto | days | months | none
+    sparkMonths: 12, // how many months the month-by-month trend shows
+    sparkDays: 30, // how many days the day-by-day trend shows
+    sparkSize: 'fill', // fill (all space under the numbers) | large | medium | small
     secondary: true, // small values for the other periods
     showRange: true, // "1–8 Nov 2026" under the label
     progress: true, // target bar (cards with a target)
@@ -313,13 +316,15 @@
     if (mode === 'auto') mode = model.grain !== 'day' ? 'days' : (p === 'day' || model.latest - model.dates[0] < 75 * DAY) ? 'days' : 'months';
     const pts = [];
     if (mode === 'days' || model.grain !== 'day') {
-      const ds = model.dates.filter((t) => t <= model.latest).slice(model.grain === 'day' ? -30 : -13);
+      const n = Math.max(2, model.grain === 'day' ? +cfg.sparkDays || 30 : (+cfg.sparkMonths || 12) + 1);
+      const ds = model.dates.filter((t) => t <= model.latest).slice(-n);
       for (const t of ds) pts.push({ t, v: valueOf(card, c, [t, t]), label: fmtRange([t, t]) });
     } else {
       // month by month, like for like: MTD -> the same days of every month (1st–8th), Last month -> full months
       const [y, m, d] = ymd(model.latest);
       const last = p === 'lastmonth' ? 1 : 0;
-      for (let i = 11 + last; i >= last; i--) {
+      const nm = Math.max(2, +cfg.sparkMonths || 12);
+      for (let i = nm - 1 + last; i >= last; i--) {
         const a = monthStart(y, m - i);
         const b = p === 'mtd' ? Date.UTC(y, m - i, Math.min(d, daysIn(y, m - i))) : monthStart(y, m - i + 1) - 1;
         if (b < model.dates[0]) continue;
@@ -490,7 +495,7 @@
     g.append('stop').attr('offset', '0%').attr('stop-color', b.color).attr('stop-opacity', 0.18);
     g.append('stop').attr('offset', '100%').attr('stop-color', b.color).attr('stop-opacity', 0);
     svg.append('path').attr('d', d3.area().x((q, i) => x(i)).y0(H).y1((q) => y(q.v)).curve(d3.curveMonotoneX)(pts)).attr('fill', `url(#${id})`);
-    svg.append('path').attr('d', d3.line().x((q, i) => x(i)).y((q) => y(q.v)).curve(d3.curveMonotoneX)(pts)).attr('fill', 'none').attr('stroke', b.color).attr('stroke-width', 1.6).attr('stroke-linecap', 'round');
+    svg.append('path').attr('d', d3.line().x((q, i) => x(i)).y((q) => y(q.v)).curve(d3.curveMonotoneX)(pts)).attr('fill', 'none').attr('stroke', b.color).attr('stroke-width', H > 70 ? 2 : 1.6).attr('stroke-linecap', 'round');
     const last = pts[pts.length - 1];
     svg.append('circle').attr('cx', x(pts.length - 1)).attr('cy', y(last.v)).attr('r', 2.8)
       .attr('fill', b.color).attr('stroke', b.color).attr('stroke-width', 1.5);
@@ -563,6 +568,7 @@
     r.setProperty('--card-bg', bg === 'transparent' ? '#ffffff' : bg);
     r.setProperty('--label-size', (+cfg.labelSize || 12) + 'px');
     r.setProperty('--detail-size', (+cfg.detailSize || 11) + 'px');
+    r.setProperty('--spark-max', { large: '120px', medium: '64px', small: '36px' }[cfg.sparkSize] || 'none');
   }
   function showTooltip (html, ev) {
     const tt = $('tooltip');

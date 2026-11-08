@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="ext-version" content="1.0.0" />
+  <meta name="ext-version" content="1.1.1" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Format KPI Card</title>
-  <link rel="stylesheet" href="./format.css?v=1.0.0" />
-  <script src="../../shared/lib/tableau.extensions.1.latest.min.js?v=1.0.0"></script>
-  <script src="./kpi-formula.js?v=1.0.0"></script>
-  <script src="./format.js?v=1.0.0" defer></script>
+  <link rel="stylesheet" href="./format.css?v=1.1.1" />
+  <script src="../../shared/lib/tableau.extensions.1.latest.min.js?v=1.1.1"></script>
+  <script src="./kpi-formula.js?v=1.1.1"></script>
+  <script src="./format.js?v=1.1.1" defer></script>
 </head>
 <body>
   <form id="form" class="fx" autocomplete="off">
@@ -52,9 +52,20 @@
           <label class="fx-check"><input type="checkbox" name="secondary" /> The other periods as small values</label>
           <label class="fx-check"><input type="checkbox" name="progress" /> Target progress bar <small>(cards with a target)</small></label>
           <label class="fx-field">Mini trend line
-            <select name="sparkline"><option value="auto">Automatic</option><option value="months">Month by month (12 months)</option><option value="days">Day by day (30 days)</option><option value="none">None</option></select>
+            <select name="sparkline"><option value="auto">Automatic</option><option value="months">Month by month</option><option value="days">Day by day</option><option value="none">None</option></select>
           </label>
-          <p class="fx-hint">Month by month is like for like: with MTD each month covers the same days (1st–8th), with Last month full months.</p>
+          <div class="fx-grid" id="sparkRange">
+            <label class="fx-field" id="sparkMonthsField">Months to show
+              <select name="sparkMonths"><option>3</option><option>6</option><option>9</option><option>12</option><option>18</option><option>24</option><option>36</option></select>
+            </label>
+            <label class="fx-field" id="sparkSizeField">Size
+              <select name="sparkSize"><option value="fill">Fill the card</option><option value="large">Large</option><option value="medium">Medium</option><option value="small">Small</option></select>
+            </label>
+            <label class="fx-field" id="sparkDaysField">Days to show
+              <select name="sparkDays"><option>7</option><option>14</option><option>30</option><option>60</option><option>90</option><option>180</option><option>365</option></select>
+            </label>
+          </div>
+          <p class="fx-hint">Automatic uses days for Last day (or short history) and months otherwise. Month by month is like for like: with MTD each month covers the same days (1st–8th), with Last month full months.</p>
         </section>
       </div>
 

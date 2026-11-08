@@ -27,11 +27,13 @@ A row of KPI cards from a **plain date** and **your measures**. The extension wo
   - *Fixed monthly number* (`1200 Mn`, `1.2B`, `4500`): for Sum measures, MTD shows progress toward the full month with a marker for where you should be today, and Last day uses the monthly target ÷ days in the month. Balances, averages and ratios are compared with the number as it is.
   - *A measure on the shelf* is rolled up over the same days (MTD target to date).
   - *Formula*: any formula, e.g. `[Target Amount] * 1.1`.
-- **Mini trend line:**
-  - Month by month (12 months) is like for like: with MTD, each month covers the same days (1st–8th); with Last month, full months.
-  - Day by day shows the last 30 days.
+- **Mini trend line** (length set in Format → Big number):
+  - Month by month (3–36 months, default 12) is like for like: with MTD, each month covers the same days (1st–8th); with Last month, full months.
+  - Day by day shows the last 7–365 days (default 30).
 - **Distinct counts** (COUNTD, e.g. unique customers) can't be added across days, because the same customer counts every day. Use *Latest value*, or build the MTD distinct count in Tableau.
 - If the date is at **MONTH** level, the periods become *This month* and *Last month*.
 
 ## Version history
+- **1.1.1**: The mini trend line fills the space under the numbers (it was capped small); size option Fill / Large / Medium / Small.
+- **1.1.0**: Choose how much history the mini trend line shows: months (3–36) and days (7–365), in Format → Big number.
 - **1.0.0**: First release.

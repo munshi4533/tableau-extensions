@@ -118,3 +118,5 @@ section h2 { margin-bottom: 4px; }
 .fx-btn.add { margin-top: 6px; }
 .fx-help { background: #f4f2fd; border: 1px solid #e3def9; border-radius: 8px; padding: 8px 10px; margin: 10px 0; color: var(--ink-2); font-size: 11px; line-height: 1.5; }
 .fx-help code { font-family: ui-monospace, Menlo, Consolas, monospace; background: white; border: 1px solid #e3def9; border-radius: 4px; padding: 0 4px; }
+
+.fx-grid[hidden] { display: none; }

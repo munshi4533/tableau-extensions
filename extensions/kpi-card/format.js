@@ -33,7 +33,7 @@
       const el = e.target;
       if (el.closest('#cards')) return;
       if (el.name && el.name in DEFAULTS && !['measures', 'calcs', 'order'].includes(el.name)) {
-        cfg[el.name] = el.type === 'checkbox' ? el.checked : (/Size$/.test(el.name) ? +el.value : el.value);
+        cfg[el.name] = el.type === 'checkbox' ? el.checked : (/Size$|^spark(Months|Days)$/.test(el.name) ? +el.value : el.value);
         refresh(); scheduleSave();
       }
     });
@@ -66,7 +66,12 @@
       if (el.type === 'checkbox') el.checked = !!cfg[el.name]; else el.value = cfg[el.name];
     }
   }
-  function refresh () { $('bgColorField').hidden = cfg.background !== 'custom'; }
+  function refresh () {
+    $('bgColorField').hidden = cfg.background !== 'custom';
+    $('sparkMonthsField').hidden = !['auto', 'months'].includes(cfg.sparkline);
+    $('sparkDaysField').hidden = !['auto', 'days'].includes(cfg.sparkline);
+    $('sparkRange').hidden = cfg.sparkline === 'none';
+  }
 
   // ---------------------------------------------------------------- cards
   function allCards () {
