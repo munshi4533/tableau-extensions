@@ -193,3 +193,18 @@ MockTableau.scenario('mn', (M) => {
   }
   return { columns, data, encodings: enc };
 });
+
+MockTableau.scenario('yoy', (M) => {
+  // year-over-year trick: "Date for Axis" moves every date to the year 2000, YEAR(snap_dt) on Series
+  const columns = ['Date for Axis', 'YEAR(snap_dt)', 'SUM(pct_act_30d)'];
+  const data = [];
+  [['2025', Date.UTC(2000, 11, 31), 0.515], ['2026', Date.UTC(2000, 10, 9), 0.505]].forEach(([yr, end, base], yi) => {
+    for (let t = Date.UTC(2000, 0, 2), i = 0; t <= end; t += 864e5, i++) {
+      const d = new Date(t);
+      let v = base + Math.sin(i / 23 + yi) * 0.012 - (yi ? i * 0.00012 : 0);
+      if (!yi && i < 30) v -= (30 - i) * 0.004;
+      data.push([M.dv(M.iso(d), d, M.fmtDay(d)), M.dv(+yr, +yr, yr), M.dv(v, v, (v * 100).toFixed(2) + '%')]);
+    }
+  });
+  return { columns, data, encodings: [{ id: 'date', field: M.field(columns[0]) }, { id: 'series', field: M.field(columns[1]) }, { id: 'value', field: M.field(columns[2]) }] };
+});

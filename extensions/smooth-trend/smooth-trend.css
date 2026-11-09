@@ -116,3 +116,6 @@ html, body {
 .st-legend .lg-item { cursor: pointer; user-select: none; }
 .st-legend .lg-item.off { opacity: .35; }
 .st-legend svg { flex: none; }
+
+.st-tt-yoy.good { color: var(--good-text, #006300); }
+.st-tt-yoy.bad { color: var(--bad-text, #b02a2a); }

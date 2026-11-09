@@ -71,7 +71,7 @@
     const list = ctx.series || [];
     $('seriesSection').hidden = !list.length;
     if (!list.length) return;
-    $('kpiSeries').innerHTML = `<option value="">Total of all groups</option>` + list.map((x) => `<option value="${esc(x.name)}">${esc(x.name)}</option>`).join('');
+    $('kpiSeries').innerHTML = `<option value="">${ctx.yearCompare ? `Latest year (${esc(ctx.latestYear)})` : 'Total of all groups'}</option>` + list.map((x) => `<option value="${esc(x.name)}">${esc(x.name)}</option>`).join('');
     $('seriesCards').addEventListener('input', (e) => {
       const el = e.target; const card = el.closest('[data-n]');
       if (!card || !el.dataset.f) return;

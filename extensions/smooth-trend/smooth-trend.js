@@ -313,6 +313,19 @@
       }
     }
 
+    // Year-over-year setup: Series = YEAR(date) and every date moved onto one calendar year
+    // ("Date for Axis" trick). Dates then carry a dummy year, so show them without it, and compare years.
+    const yearRe = /^(FY\s?)?\d{4}$/i;
+    const yearCompare = xType === 'time' && series.length >= 2 && series.length <= MAX_SERIES &&
+      series.every((s) => yearRe.test(String(s.name).trim())) &&
+      new Set(keyOrder.map((k) => new Date(k).getUTCFullYear())).size === 1;
+    let latestYear = '';
+    if (yearCompare) {
+      const yr = (n) => +String(n).replace(/\D/g, '');
+      latestYear = series.reduce((a, s) => (yr(s.name) > yr(a) ? s.name : a), series[0].name);
+      series.forEach((s) => s.points.forEach((p) => { p.xLabel = fmtNoYear(new Date(p.k), grain); }));
+    }
+
     // Fold series beyond the palette into "Other" (never generate extra hues)
     if (series.length > MAX_SERIES) {
       series.sort((a, b) => lastY(b) - lastY(a));
@@ -338,7 +351,7 @@
         const j = s.byKey.get(k);
         if (j !== undefined) { y += s.points[j].y; label = label || s.points[j].xLabel; n++; }
       }
-      return n ? { k, y, xLabel: label } : null;
+      return n ? { k, y: unit.pct ? y / n : y, xLabel: label } : null; // adding up percentages across groups means nothing
     }).filter(Boolean);
 
     if (!totals.length) return { empty: true, noData: true };
@@ -348,7 +361,8 @@
       const [a, b] = kpiK;
       // with a dimension on Series there is one row per group: use the chosen group, or combine them
       let kr = kpiRows.rows;
-      if (serK && cfg.kpiSeries) { const one = kr.filter((r) => formatted(r[serK]) === cfg.kpiSeries); if (one.length) kr = one; }
+      const kName = cfg.kpiSeries || latestYear;
+      if (serK && kName) { const one = kr.filter((r) => formatted(r[serK]) === kName); if (one.length) kr = one; }
       const sample = kr[0][a.k];
       const kUnit = detectUnit(sample && sample.formattedValue, toNumber(sample));
       const avg = cfg.kpiAgg === 'avg' || (cfg.kpiAgg === 'auto' && kUnit.pct);
@@ -377,7 +391,9 @@
       kpiShelf,
       measures: [...measMaps.entries()].map(([key, v]) => ({ key, name: v.name, byKey: v.byKey, unit: detectUnit(v.sample, v.sampleY) })),
       valueName: cleanName(valF.name || 'Value'),
-      seriesName: serF ? cleanName(serF.name) : null
+      seriesName: serF ? cleanName(serF.name) : null,
+      yearCompare,
+      latestYear
     };
   }
 
@@ -415,6 +431,17 @@
       case 'month': return d3.utcFormat('%b %Y')(d);
       case 'week': return d3.utcFormat('Week of %-d %b %Y')(d);
       default: return d3.utcFormat('%-d %b %Y')(d);
+    }
+  }
+
+  // dates in a year-over-year chart, without the dummy year
+  function fmtNoYear (d, grain) {
+    switch (grain) {
+      case 'quarter': return `Q${Math.floor(d.getUTCMonth() / 3) + 1}`;
+      case 'month': return d3.utcFormat('%b')(d);
+      case 'week': return d3.utcFormat('Week of %-d %b')(d);
+      case 'year': return d3.utcFormat('%Y')(d);
+      default: return d3.utcFormat('%-d %b')(d);
     }
   }
 
@@ -593,7 +620,7 @@
     if (cfg.subtitle === 'asof') sub = `Data as of ${last.xLabel}`;
     else if (cfg.subtitle === 'range') {
       const parts = [`${t[0].xLabel} – ${last.xLabel}`, `${t.length} ${periodWord(t.length)}`];
-      if (!model.single) parts.push(`by ${model.seriesName || 'series'} (${model.series.length})`);
+      if (model.yearCompare) { parts[1] = 'same dates'; parts.unshift([...model.series].map((s0) => s0.name).sort().join(' vs ')); } else if (!model.single) parts.push(`by ${model.seriesName || 'series'} (${model.series.length})`);
       sub = parts.join(' · ');
     }
     $('subtitle').textContent = sub;
@@ -608,8 +635,13 @@
   // ---------------------------------------------------------------- KPI engine (header number)
   // Returns { value, valueText, label, base, baseCaption, tooltip }
   function computeKpi () {
-    const ks = !model.single && cfg.kpiSeries ? model.series.find((s0) => s0.name === cfg.kpiSeries) : null;
+    const kName = cfg.kpiSeries || (model.yearCompare ? model.latestYear : '');
+    const ks = !model.single && kName ? model.series.find((s0) => s0.name === kName) : null;
     const t = ks ? ks.points.map((p) => ({ k: p.k, y: p.y, xLabel: p.xLabel })) : model.totals;
+    // year-over-year setup: "last year" is the previous year's line on the same dates
+    const py = model.yearCompare && ks ? prevYearSeries(ks) : null;
+    const pyPts = py ? py.points.map((p) => ({ k: p.k, y: p.y, xLabel: p.xLabel })) : null;
+    const yrText = (d) => (model.yearCompare && ks ? ks.name : String(d.getUTCFullYear()));
     const n = t.length;
     const last = t[n - 1];
     const time = model.xType === 'time';
@@ -647,7 +679,7 @@
       }
       let b = null;
       if (cmp === 'previous' && i > 0) b = t[i - 1];
-      else if (cmp === 'yoy' && time) b = nearestPoint(+utcAddMonths(new Date(p.k), -12));
+      else if (cmp === 'yoy' && pyPts) { b = pyPts.find((q) => q.k === p.k) || null; if (b) b = { ...b, xLabel: `${b.xLabel} ${py.name}` }; } else if (cmp === 'yoy' && time && !model.yearCompare) b = nearestPoint(+utcAddMonths(new Date(p.k), -12), t);
       else if (cmp === 'first' && i > 0) b = t[0];
       else if (cmp === 'peak') {
         b = t.slice(0, i + 1).reduce((a, q) => (q.y > a.y ? q : a), t[0]);
@@ -663,12 +695,18 @@
       const end = new Date(last.k);
       const start = periodStart(end, unit);
       out.value = aggregate(inRange(t, start, end));
-      const y = end.getUTCFullYear();
-      out.label = mode === 'ytd' ? `YTD ${y}` : mode === 'qtd' ? `QTD Q${Math.floor(end.getUTCMonth() / 3) + 1} ${y}` : `MTD ${d3.utcFormat('%b %Y')(end)}`;
-      out.tooltip = `${aggWord()} from ${d3.utcFormat('%d %b %Y')(start)} to ${last.xLabel}`;
+      const y = yrText(end);
+      out.label = mode === 'ytd' ? `YTD ${y}` : mode === 'qtd' ? `QTD Q${Math.floor(end.getUTCMonth() / 3) + 1} ${y}` : `MTD ${d3.utcFormat('%b')(end)} ${y}`;
+      out.tooltip = `${aggWord()} from ${d3.utcFormat(model.yearCompare ? '%d %b' : '%d %b %Y')(start)} to ${last.xLabel}${model.yearCompare && ks ? ' ' + ks.name : ''}`;
       let shift = 0;
       if (cmp === 'previous') shift = unit === 'month' ? -1 : unit === 'quarter' ? -3 : -12;
       else if (cmp === 'yoy') shift = -12;
+      if (cmp === 'yoy' && model.yearCompare) {
+        const prev = pyPts ? inRange(pyPts, start, end) : [];
+        if (prev.length) { out.base = aggregate(prev); out.baseCaption = `vs same period ${py.name}`; } else out.baseCaption = 'no data last year';
+        shift = 0;
+      }
+      if (shift && model.yearCompare && unit === 'year') { out.baseCaption = ''; shift = 0; }
       if (shift) {
         const prev = inRange(t, utcAddMonths(start, shift), utcAddMonths(end, shift));
         if (prev.length) {
@@ -685,7 +723,10 @@
     out.value = calc(t);
     out.label = isTotal ? `Total · ${n} ${periodWord(n)}` : `Average per ${periodWord(1)}`;
     out.tooltip = `${t[0].xLabel} – ${last.xLabel}`;
-    if (cmp === 'yoy' && time) {
+    if (cmp === 'yoy' && pyPts) {
+      const prev = inRange(pyPts, new Date(t[0].k), new Date(last.k));
+      if (prev.length) { out.base = calc(prev); out.baseCaption = `vs same range ${py.name}`; }
+    } else if (cmp === 'yoy' && time && !model.yearCompare) {
       const prev = inRange(t, utcAddMonths(new Date(t[0].k), -12), utcAddMonths(new Date(last.k), -12));
       if (prev.length) { out.base = calc(prev); out.baseCaption = 'vs same range last year'; }
     }
@@ -700,10 +741,14 @@
     return aggMode() === 'avg' ? sum / pts.length : sum;
   }
   function inRange (pts, a, b) { const lo = +a; const hi = +b; return pts.filter((p) => p.k >= lo && p.k <= hi); }
-  function nearestPoint (target) {
+  function prevYearSeries (s) {
+    const y = +String(s.name).replace(/\D/g, '');
+    return model.series.find((o) => o !== s && +String(o.name).replace(/\D/g, '') === y - 1) || null;
+  }
+  function nearestPoint (target, pts) {
     const tol = Math.max(model.grainMs / 2, 864e5);
     let best = null; let bd = Infinity;
-    for (const p of model.totals) { const d = Math.abs(p.k - target); if (d < bd) { bd = d; best = p; } }
+    for (const p of (pts || model.totals)) { const d = Math.abs(p.k - target); if (d < bd) { bd = d; best = p; } }
     return bd <= tol ? best : null;
   }
   function utcAddMonths (d, months) {
@@ -809,8 +854,10 @@
       .call((a) => a.select('.domain').remove());
 
     const xAxis = d3.axisBottom(x).tickSizeOuter(0).tickSize(4).tickPadding(6);
-    if (xType === 'time') applyTimeTicks(xAxis, keys, iw);
-    else if (xType === 'number') xAxis.ticks(Math.max(2, Math.floor(iw / 70))).tickFormat(d3.format('~g'));
+    if (xType === 'time') {
+      applyTimeTicks(xAxis, keys, iw);
+      if (model.yearCompare) xAxis.tickFormat((d) => fmtNoYear(d, model.grain === 'day' && d.getUTCDate() === 1 ? 'month' : model.grain));
+    } else if (xType === 'number') xAxis.ticks(Math.max(2, Math.floor(iw / 70))).tickFormat(d3.format('~g'));
     else {
       const maxLen = d3.max(keys, (k) => String(k).length) || 1;
       const fit = Math.max(1, Math.floor(iw / (maxLen * 0.62 * xs + 14)));
@@ -1263,8 +1310,17 @@
       }
       if (items.length) extra = `<div class="st-tt-extra">${items.map((e) => `<div><span>${escapeHtml(e.name)}</span><b>${escapeHtml(e.value)}</b></div>`).join('')}</div>`;
     } else {
-      const total = hits.reduce((a, h) => a + h.p.y, 0);
-      extra = `<div class="st-tt-extra"><div><span>Total</span><b>${escapeHtml(fmtNum(total, null, true))}</b></div></div>`;
+      const cur = model.yearCompare ? hits.find((h) => h.s.name === model.latestYear) : null;
+      const prv = cur ? hits.find((h) => h.s === prevYearSeries(cur.s)) : null;
+      if (cur && prv) {
+        const c = change(cur.p.y, prv.p.y); const pct = fmtPct(c.pct); const sign = c.delta > 0 ? '+' : c.delta < 0 ? '−' : '';
+        extra = `<div class="st-tt-extra"><div><span>${escapeHtml(cur.s.name)} vs ${escapeHtml(prv.s.name)}</span><b class="st-tt-yoy ${c.tone}">${arrow(c.dir)} ${model.unit.pct ? escapeHtml(fmtDelta(c.delta)) : escapeHtml(sign + (pct || '') + ' (' + fmtDelta(c.delta) + ')')}</b></div></div>`;
+      } else if (!model.yearCompare && hits.length > 1) {
+        const total = hits.reduce((a, h) => a + h.p.y, 0);
+        extra = model.unit.pct
+          ? `<div class="st-tt-extra"><div><span>Average</span><b>${escapeHtml(fmtNum(total / hits.length, null, true))}</b></div></div>`
+          : `<div class="st-tt-extra"><div><span>Total</span><b>${escapeHtml(fmtNum(total, null, true))}</b></div></div>`;
+      }
     }
 
     tt.innerHTML = `<div class="st-tt-head">${head}</div>${rows}${extra}`;
@@ -1303,6 +1359,8 @@
       rawGrain: model.rawGrain,
       hasKpiShelf: !!model.kpiShelf,
       measures: (model.measures || []).map((mm) => ({ key: mm.key, name: mm.name })),
+      yearCompare: !!model.yearCompare,
+      latestYear: model.latestYear || '',
       series: model.single ? [] : model.series.filter((s0) => !s0.other).map((s0, i) => ({ name: s0.name, color: (cfg.seriesStyles[s0.name] || {}).color || PALETTE[i % PALETTE.length] })),
       params: params.filter((p) => p.value !== null).map((p) => p.name),
       kpiShelfNames: model.kpiShelf ? [model.kpiShelf.name, model.kpiShelf.compareName].filter(Boolean) : [],
