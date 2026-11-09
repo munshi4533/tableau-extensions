@@ -4,13 +4,13 @@
   <base href="../" />
   <!-- GENERATED preview (tools/build.py): sample data instead of Tableau -->
   <meta charset="utf-8" />
-  <meta name="ext-version" content="1.3.0" />
+  <meta name="ext-version" content="1.4.0" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Format KPI Card (preview)</title>
-  <link rel="stylesheet" href="./format.css?v=1.3.0" />
+  <link rel="stylesheet" href="./format.css?v=1.4.0" />
   <script>window.tableau = window.parent.__mockDialogTableau;</script>
-  <script src="./kpi-formula.js?v=1.3.0"></script>
-  <script src="./format.js?v=1.3.0" defer></script>
+  <script src="./kpi-formula.js?v=1.4.0"></script>
+  <script src="./format.js?v=1.4.0" defer></script>
 </head>
 <body>
   <form id="form" class="fx" autocomplete="off">
@@ -82,6 +82,13 @@
             </select>
           </label>
           <p class="fx-hint">Every card uses this unless it picks its own chart (Cards → Number format, target &amp; chart).</p>
+          <div class="fx-grid">
+            <label class="fx-field">Line style
+              <select name="lineCurve"><option value="extra">Extra smooth</option><option value="smooth">Smooth</option><option value="straight">Straight</option></select>
+            </label>
+          </div>
+          <label class="fx-check"><input type="checkbox" name="barRound" /> Rounded bars <small>(top and bottom)</small></label>
+          <p class="fx-hint">Extra smooth draws soft waves; dips look a little shallower, the numbers in the tooltip stay exact.</p>
         </section>
         <section id="fullChart">
           <h2>Dates and running total</h2>

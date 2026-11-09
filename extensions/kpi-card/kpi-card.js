@@ -23,6 +23,8 @@
     runReset: 'none', // running total restarts: none | month | year
     chartAxis: true, // date labels under the chart
     chartLegend: true, // "● Running total ● Day" next to the card name
+    lineCurve: 'extra', // straight | smooth | extra   (lines in charts and the mini trend)
+    barRound: true, // rounded ends on bars (top and bottom)
     compare: 'auto', // auto (previous day / LMTD / previous month) | yoy | none
     title: '',
     columns: 'auto', // auto | 1..6
@@ -508,6 +510,7 @@
   function chartColors (c, ct, color) {
     return { bar: c.barColor || color, line: c.lineColor || (ct === 'combo' ? LINE_DEFAULT : color) };
   }
+  const curveOf = () => (cfg.lineCurve === 'straight' ? d3.curveLinear : cfg.lineCurve === 'extra' ? d3.curveBasis : d3.curveMonotoneX);
   const runName = () => (cfg.runReset === 'month' ? 'Month to date' : cfg.runReset === 'year' ? 'Year to date' : 'Cumulative');
   const dayName = () => (model.grain === 'day' ? 'Day' : model.grain === 'month' ? 'Month' : 'Period');
 
@@ -570,15 +573,16 @@
       g.append('g').selectAll('rect').data(pts.filter((q) => q.day !== null)).join('rect')
         .attr('x', (q) => cx(pts.indexOf(q)) - bw / 2).attr('width', bw)
         .attr('y', (q) => Math.min(yDay(q.day), yDay(0))).attr('height', (q) => Math.max(0.5, Math.abs(yDay(q.day) - yDay(0))))
+        .attr('rx', cfg.barRound ? Math.min(bw / 2, 6) : 0)
         .attr('fill', b.cols.bar).attr('opacity', ct === 'combo' ? 0.75 : 0.85);
     }
-    const lineOf = (key, y) => d3.line().defined((q) => q[key] !== null).x((q, i) => cx(i)).y((q) => y(q[key])).curve(d3.curveMonotoneX)(pts);
+    const lineOf = (key, y) => d3.line().defined((q) => q[key] !== null).x((q, i) => cx(i)).y((q) => y(q[key])).curve(curveOf())(pts);
     if (ct === 'running') {
       const gid = `kc-r${b.i}`;
       const gr = svg.append('defs').append('linearGradient').attr('id', gid).attr('x1', 0).attr('x2', 0).attr('y1', 0).attr('y2', 1);
       gr.append('stop').attr('offset', '0%').attr('stop-color', b.cols.line).attr('stop-opacity', 0.2);
       gr.append('stop').attr('offset', '100%').attr('stop-color', b.cols.line).attr('stop-opacity', 0);
-      g.append('path').attr('d', d3.area().defined((q) => q.cum !== null).x((q, i) => cx(i)).y0(ih).y1((q) => yRun(q.cum)).curve(d3.curveMonotoneX)(pts)).attr('fill', `url(#${gid})`);
+      g.append('path').attr('d', d3.area().defined((q) => q.cum !== null).x((q, i) => cx(i)).y0(ih).y1((q) => yRun(q.cum)).curve(curveOf())(pts)).attr('fill', `url(#${gid})`);
     }
     if (hasRun) g.append('path').attr('d', lineOf('cum', yRun)).attr('fill', 'none').attr('stroke', b.cols.line).attr('stroke-width', 2).attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round');
     if (hasDayLine) g.append('path').attr('d', lineOf('day', yDay)).attr('fill', 'none').attr('stroke', b.cols.line).attr('stroke-width', 1.6).attr('stroke-linejoin', 'round');
@@ -642,8 +646,8 @@
     const g = svg.append('defs').append('linearGradient').attr('id', id).attr('x1', 0).attr('x2', 0).attr('y1', 0).attr('y2', 1);
     g.append('stop').attr('offset', '0%').attr('stop-color', b.color).attr('stop-opacity', 0.18);
     g.append('stop').attr('offset', '100%').attr('stop-color', b.color).attr('stop-opacity', 0);
-    svg.append('path').attr('d', d3.area().x((q, i) => x(i)).y0(H).y1((q) => y(q.v)).curve(d3.curveMonotoneX)(pts)).attr('fill', `url(#${id})`);
-    svg.append('path').attr('d', d3.line().x((q, i) => x(i)).y((q) => y(q.v)).curve(d3.curveMonotoneX)(pts)).attr('fill', 'none').attr('stroke', b.color).attr('stroke-width', H > 70 ? 2 : 1.6).attr('stroke-linecap', 'round');
+    svg.append('path').attr('d', d3.area().x((q, i) => x(i)).y0(H).y1((q) => y(q.v)).curve(curveOf())(pts)).attr('fill', `url(#${id})`);
+    svg.append('path').attr('d', d3.line().x((q, i) => x(i)).y((q) => y(q.v)).curve(curveOf())(pts)).attr('fill', 'none').attr('stroke', b.color).attr('stroke-width', H > 70 ? 2 : 1.6).attr('stroke-linecap', 'round');
     const last = pts[pts.length - 1];
     svg.append('circle').attr('cx', x(pts.length - 1)).attr('cy', y(last.v)).attr('r', 2.8)
       .attr('fill', b.color).attr('stroke', b.color).attr('stroke-width', 1.5);

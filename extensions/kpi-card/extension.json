@@ -1,7 +1,7 @@
 {
   "name": "KPI Card",
   "manifestName": "KpiCard",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "A row of KPI cards from a plain date and your measures: MTD, last month or last day as the big number, worked out in the extension. Calculated KPIs (e.g. Average Loan Size = Loan Amount / Loans) are rolled up correctly for each period. Comparison, secondary values, target progress, and a chart per card: mini trend, daily bars + running total, bars, line or running total.",
   "entry": "index.html",
   "icon": "icon.png",
