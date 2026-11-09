@@ -13,7 +13,8 @@ A row of KPI cards from a **plain date** and **your measures**. The extension wo
      - **+ Calculated KPI**: a formula over the measures, e.g. `[Loan Amount] / [Loans]`. Each part is rolled up for the period first, then the formula runs.
      - Per card: name, color, its own period, *higher / lower is better*, number format (as in Tableau, K / M / Mn / B, %, prefix, suffix) and target.
      - Use ▲ ▼ to change the order and *Hide* to hide input measures.
-   - **Big number**: Last day, MTD or Last month; compare with previous day / LMTD / previous month (automatic) or the same period last year; viewer buttons; small values for the other periods; target bar; mini trend line.
+   - **Big number**: Last day, MTD, Last month, YTD or Total (all dates); compare with previous day / LMTD / previous month (automatic) or the same period last year; viewer buttons; small values for the other periods; target bar; mini trend line.
+   - **Chart**: mini trend line, bars per date + running total, bars, line, running total or none (per card in Cards). Dates: all, or the last N months or days. The running total adds up over all dates or restarts each month (MTD) or year (YTD).
    - **Look**: title, cards per row, card style, alignment, text sizes, background.
 
 ## How the numbers are calculated
@@ -36,6 +37,7 @@ A row of KPI cards from a **plain date** and **your measures**. The extension wo
 - If the date is at **MONTH** level, the periods become *This month* and *Last month*.
 
 ## Version history
+- **1.3.0**: *Chart* tab. Each card can show a mini trend line, **bars per date + running total** (two scales, like a funnel dashboard), bars, a line or a running total, with date labels, a legend and per-card bar and line colors. The running total can add up over all dates or restart each month or year. Ratios run "to date" (e.g. approved so far ÷ submitted so far). New period **Total (all dates)**. *Periods to offer* chooses which buttons and small values appear.
 - **1.2.0**: YTD (year to date) as a big-number period and viewer button, compared with LYTD (same days last year); YTD trend line shows the year building up month by month. Viewer buttons can be hidden (Format → Big number).
 - **1.1.1**: The mini trend line fills the space under the numbers (it was capped small); size option Fill / Large / Medium / Small.
 - **1.1.0**: Choose how much history the mini trend line shows: months (3–36) and days (7–365), in Format → Big number.

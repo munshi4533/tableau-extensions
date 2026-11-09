@@ -32,8 +32,15 @@
     form.addEventListener('input', (e) => {
       const el = e.target;
       if (el.closest('#cards')) return;
-      if (el.name && el.name in DEFAULTS && !['measures', 'calcs', 'order'].includes(el.name)) {
+      if (el.dataset.sp) {
+        const set = new Set(cfg.switchPeriods || []);
+        if (el.checked) set.add(el.dataset.sp); else set.delete(el.dataset.sp);
+        cfg.switchPeriods = ['day', 'mtd', 'lastmonth', 'ytd', 'total'].filter((p) => set.has(p));
+        scheduleSave(); return;
+      }
+      if (el.name && el.name in DEFAULTS && !['measures', 'calcs', 'order', 'switchPeriods'].includes(el.name)) {
         cfg[el.name] = el.type === 'checkbox' ? el.checked : (/Size$|^spark(Months|Days)$/.test(el.name) ? +el.value : el.value);
+        if (/^spark(Months|Days)$/.test(el.name)) form.querySelectorAll(`[name="${el.name}"]`).forEach((x) => { x.value = el.value; });
         refresh(); scheduleSave();
       }
     });
@@ -62,6 +69,7 @@
 
   function fillSimple () {
     for (const el of form.elements) {
+      if (el.dataset && el.dataset.sp) { el.checked = (cfg.switchPeriods || DEFAULTS.switchPeriods || []).includes(el.dataset.sp); continue; }
       if (!el.name || !(el.name in cfg) || el.closest('#cards')) continue;
       if (el.type === 'checkbox') el.checked = !!cfg[el.name]; else el.value = cfg[el.name];
     }
@@ -71,6 +79,11 @@
     $('sparkMonthsField').hidden = !['auto', 'months'].includes(cfg.sparkline);
     $('sparkDaysField').hidden = !['auto', 'days'].includes(cfg.sparkline);
     $('sparkRange').hidden = cfg.sparkline === 'none';
+    const anyFull = cfg.chartType !== 'spark' && cfg.chartType !== 'none';
+    $('fullChart').hidden = !anyFull && !Object.values(cfg.measures).concat(cfg.calcs).some((c) => c && c.chartType && !['spark', 'none'].includes(c.chartType));
+    $('miniChart').hidden = cfg.chartType !== 'spark';
+    $('chartMonthsField').hidden = cfg.chartRange !== 'months';
+    $('chartDaysField').hidden = cfg.chartRange !== 'days';
   }
 
   // ---------------------------------------------------------------- cards
@@ -137,8 +150,8 @@
           <label class="fx-field">Big number<select data-f="period">${opts([['', 'As set in Big number tab'], ['day', 'Last day'], ['mtd', 'MTD'], ['lastmonth', 'Last month'], ['ytd', 'YTD']], c.period)}</select></label>
           <label class="fx-field">Good direction<select data-f="better">${opts([['up', 'Higher is better'], ['down', 'Lower is better'], ['none', 'Neutral (no colors)']], c.better)}</select></label>
         </div>
-        <details${c.format !== 'auto' || c.prefix || c.suffix || c.decimals !== 'auto' || c.targetType !== 'none' ? ' open' : ''}>
-          <summary>Number format &amp; target</summary>
+        <details${c.format !== 'auto' || c.prefix || c.suffix || c.decimals !== 'auto' || c.targetType !== 'none' || c.chartType ? ' open' : ''}>
+          <summary>Number format, target &amp; chart</summary>
           <div class="row">
             <label class="fx-field">Format<select data-f="format">${opts([['auto', isCalc ? 'Automatic' : 'As in Tableau'], ['number', '1,234,567'], ['compact', 'Short (K / M / B)'], ['k', 'Thousands (K)'], ['m', 'Millions (M)'], ['mn', 'Millions (Mn)'], ['b', 'Billions (B)'], ['percent', 'Percent (0.25 → 25%)']], c.format)}</select></label>
             <label class="fx-field">Decimals<select data-f="decimals">${opts([['auto', 'Auto'], ['0', '0'], ['1', '1'], ['2', '2'], ['3', '3']], c.decimals)}</select></label>
@@ -153,6 +166,11 @@
           </div>
           ${c.targetType === 'fixed' ? '<p class="fx-hint">MTD shows progress toward the full month with a marker for where you should be today; Last day uses the monthly target ÷ days in the month; YTD uses monthly × 12.</p>' : ''}
           ${c.targetType === 'measure' ? '<p class="fx-hint">The target measure is rolled up over the same days (e.g. MTD target to date). Hide its own card if you don\'t want to see it.</p>' : ''}
+          <div class="row">
+            <label class="fx-field">Chart<select data-f="chartType">${opts([['', 'As set in Chart tab'], ['spark', 'Mini trend line'], ['combo', 'Bars + running total'], ['bars', 'Bars per date'], ['line', 'Line per date'], ['running', 'Running total'], ['none', 'None']], c.chartType)}</select></label>
+            <label class="fx-color">Bars <input type="color" data-f="barColor" value="${esc(c.barColor || color)}"></label>
+            <label class="fx-color">Line <input type="color" data-f="lineColor" value="${esc(c.lineColor || '#eda100')}"></label>
+          </div>
         </details>
       </div>`;
     }).join('');
@@ -172,6 +190,7 @@
     if (f === 'label') { const nm = box.querySelector('.nm'); if (nm) nm.textContent = el.value || (card.kind === 'calc' ? 'Calculated KPI' : card.m.name); }
     if (f === 'hidden') box.classList.toggle('off', el.checked);
     if (f === 'targetType') { drawCards(); }
+    if (f === 'chartType') refresh();
     scheduleSave();
   }
 

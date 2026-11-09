@@ -15,8 +15,14 @@
   const PALETTE = ['#2a78d6', '#eb6834', '#1baf7a', '#6250d6', '#eda100', '#e87ba4', '#008300', '#e34948'];
   const DAY = 864e5;
   const DEFAULTS = {
-    period: 'mtd', // day | mtd | lastmonth | ytd  (default big number for all cards)
+    period: 'mtd', // day | mtd | lastmonth | ytd | total  (default big number for all cards)
     switcher: true, // buttons so viewers can switch every card at once
+    switchPeriods: ['day', 'mtd', 'lastmonth', 'ytd'], // periods offered on the buttons and as small values
+    chartType: 'spark', // spark (mini trend) | combo (daily bars + running total) | bars | line | running | none
+    chartRange: 'all', // all | months | days   (for combo / bars / line / running)
+    runReset: 'none', // running total restarts: none | month | year
+    chartAxis: true, // date labels under the chart
+    chartLegend: true, // "● Running total ● Day" next to the card name
     compare: 'auto', // auto (previous day / LMTD / previous month) | yoy | none
     title: '',
     columns: 'auto', // auto | 1..6
@@ -42,8 +48,10 @@
   const CARD = {
     label: '', hidden: false, rollup: 'sum', period: '', better: 'up',
     format: 'auto', decimals: 'auto', prefix: '', suffix: '', color: '',
-    targetType: 'none', targetValue: '', targetKey: '', targetFormula: ''
+    targetType: 'none', targetValue: '', targetKey: '', targetFormula: '',
+    chartType: '', barColor: '', lineColor: '' // '' = as set for all cards
   };
+  const LINE_DEFAULT = '#eda100';
   const ROLLUPS = { sum: 'Sum of days', last: 'Latest value', avg: 'Average of days', max: 'Highest day', min: 'Lowest day' };
 
   let cfg = { ...DEFAULTS };
@@ -215,13 +223,13 @@
   function shiftMonths (t, n) { const [y, m, d] = ymd(t); return Date.UTC(y, m + n, Math.min(d, daysIn(y, m + n))); }
 
   function availablePeriods () {
-    if (model.grain === 'day') return ['day', 'mtd', 'lastmonth', 'ytd'];
-    if (model.grain === 'month') return ['day', 'lastmonth', 'ytd'];
-    return ['day', 'ytd'];
+    if (model.grain === 'day') return ['day', 'mtd', 'lastmonth', 'ytd', 'total'];
+    if (model.grain === 'month') return ['day', 'lastmonth', 'ytd', 'total'];
+    return ['day', 'ytd', 'total'];
   }
   function periodLabel (p) {
     if (p === 'day') return model.grain === 'day' ? 'Last day' : model.grain === 'month' ? 'This month' : `Latest ${model.grain}`;
-    return p === 'mtd' ? 'MTD' : p === 'ytd' ? 'YTD' : 'Last month';
+    return p === 'mtd' ? 'MTD' : p === 'ytd' ? 'YTD' : p === 'total' ? 'Total' : 'Last month';
   }
   function effectivePeriod (c) {
     const av = availablePeriods();
@@ -234,6 +242,7 @@
     if (p === 'mtd') return [monthStart(y, m), D];
     if (p === 'lastmonth') return [monthStart(y, m - 1), monthStart(y, m) - 1];
     if (p === 'ytd') return [Date.UTC(y, 0, 1), D];
+    if (p === 'total') return [model.dates[0], D]; // every date in the data (your Tableau filters decide the range)
     return [D, D];
   }
   // the comparison period must be fully inside the data, otherwise "+4,000% vs LYTD" from a half-covered period
@@ -243,7 +252,7 @@
     return cmp;
   }
   function compareRaw (p, range) {
-    if (cfg.compare === 'none') return null;
+    if (cfg.compare === 'none' || p === 'total') return null;
     if (cfg.compare === 'yoy') return { range: [shiftMonths(range[0], -12), shiftMonths(range[1], -12)], caption: 'vs last year' };
     const D = model.latest; const [y, m, d] = ymd(D);
     if (p === 'day') {
@@ -300,6 +309,7 @@
     if (!cfg.progress || c.targetType === 'none' || v === null) return null;
     let T = null; let pace = null; let caption = 'target';
     if (c.targetType === 'fixed') {
+      if (p === 'total') return null; // a monthly target has no meaning for "all dates"
       const monthly = parseAmount(c.targetValue);
       if (monthly === null) return null;
       const [y, m, d] = ymd(model.latest);
@@ -404,11 +414,18 @@
     const built = cards.map((cd, i) => buildCard(cd, i));
     built.forEach((b) => box.appendChild(b.el));
     fitValues(built);
-    built.forEach((b) => b.spark && drawSpark(b));
+    built.forEach((b) => { if (b.spark) drawSpark(b); if (b.chart) drawChart(b); });
   }
 
-  function renderHeader () {
+  // periods offered on the viewer buttons and as small values (always including the default one)
+  function offeredPeriods () {
     const av = availablePeriods();
+    const want = new Set(Array.isArray(cfg.switchPeriods) && cfg.switchPeriods.length ? cfg.switchPeriods : DEFAULTS.switchPeriods);
+    want.add(cfg.period === 'mtd' && !av.includes('mtd') ? 'day' : cfg.period);
+    return av.filter((p) => want.has(p));
+  }
+  function renderHeader () {
+    const av = offeredPeriods();
     const showSwitch = cfg.switcher && av.length > 1;
     const sw = $('switcher');
     sw.hidden = !showSwitch;
@@ -449,7 +466,7 @@
       dinfo = change(v, b, c, unit);
       delta = `<div class="kc-delta ${dinfo.tone}"><b>${dinfo.arrow} ${esc(dinfo.text)}</b> <span>${esc(cmp.caption)}</span></div>`;
     }
-    const others = cfg.secondary ? availablePeriods().filter((q) => q !== p) : [];
+    const others = cfg.secondary ? offeredPeriods().filter((q) => q !== p) : [];
     const sec = others.length ? `<div class="kc-sec">${others.map((q) => `<span>${esc(periodLabel(q))} <b>${esc(fmt(valueOf(card, c, rangeOf(q))))}</b></span>`).join('')}</div>` : '';
     let prog = '';
     if (tgt) {
@@ -458,13 +475,17 @@
       prog = `<div class="kc-prog"><div class="kc-bar"><i class="${c.better === 'none' ? '' : good ? 'good' : 'bad'}" style="width:${w}%"></i>${tgt.pace ? `<b style="left:${tgt.pace * 100}%" title="Where MTD should be today"></b>` : ''}</div>` +
         `<span>${Math.round(tgt.pct * 100)}% of ${esc(fmt(tgt.T))}</span></div>`;
     }
+    const ct = chartTypeOf(c);
+    const cols = chartColors(c, ct, color);
+    const legend = cfg.chartLegend && ct === 'combo'
+      ? `<div class="kc-legend"><span><i style="background:${cols.line}"></i>${esc(runName())}</span><span><i style="background:${cols.bar}"></i>${esc(dayName())}</span></div>` : '';
     el.innerHTML =
-      `<div class="kc-label"><span class="kc-name">${esc(name)}</span>${cfg.showRange ? `<span class="kc-range">${esc(periodLabel(p))} · ${esc(fmtRange(range))}</span>` : ''}</div>` +
-      `<div class="kc-value">${esc(fmt(v))}</div>${delta}${sec}${prog}<div class="kc-spark"></div>`;
+      `<div class="kc-head"><div class="kc-label"><span class="kc-name">${esc(name)}</span>${cfg.showRange ? `<span class="kc-range">${esc(periodLabel(p))} · ${esc(fmtRange(range))}</span>` : ''}</div>${legend}</div>` +
+      `<div class="kc-value">${esc(fmt(v))}</div>${delta}${sec}${prog}${ct === 'spark' ? '<div class="kc-spark"></div>' : ct === 'none' ? '' : '<div class="kc-chart"></div>'}`;
 
     // hover: what's behind the number
     el.addEventListener('mousemove', (e) => {
-      if (e.target.closest('.kc-spark svg')) return;
+      if (e.target.closest('.kc-spark svg, .kc-chart svg')) return;
       const rows = [[`${periodLabel(p)} · ${fmtRange(range)}`, fmt(v), true]];
       if (cmp) { const k = cmp.caption.replace(/^vs /, ''); rows.push([`${k.charAt(0).toUpperCase() + k.slice(1)} · ${fmtRange(cmp.range)}`, fmt(b)]); }
       if (dinfo) rows.push(['Change', `${dinfo.text}${dinfo.abs ? ` (${dinfo.abs})` : ''}`]);
@@ -476,7 +497,117 @@
       showTooltip(html, e);
     });
     el.addEventListener('mouseleave', hideTooltip);
-    return { el, spark: sparkPoints(card, c, p), card, c, unit, color, i };
+    return { el, spark: ct === 'spark' ? sparkPoints(card, c, p) : null, chart: ct !== 'spark' && ct !== 'none' ? chartData(card, c) : null, ct, cols, card, c, unit, color, i };
+  }
+
+  // ---------------------------------------------------------------- chart (bars per date + running total)
+  function chartTypeOf (c) {
+    const t = c.chartType || cfg.chartType || 'spark';
+    return t === 'spark' && cfg.sparkline === 'none' ? 'none' : t;
+  }
+  function chartColors (c, ct, color) {
+    return { bar: c.barColor || color, line: c.lineColor || (ct === 'combo' ? LINE_DEFAULT : color) };
+  }
+  const runName = () => (cfg.runReset === 'month' ? 'Month to date' : cfg.runReset === 'year' ? 'Year to date' : 'Cumulative');
+  const dayName = () => (model.grain === 'day' ? 'Day' : model.grain === 'month' ? 'Month' : 'Period');
+
+  // one point per date: the value of that date and the running total up to it
+  function chartData (card, c) {
+    let ds = model.dates.filter((t) => t <= model.latest);
+    if (cfg.chartRange === 'months') {
+      const [y, m] = ymd(model.latest);
+      const from = monthStart(y, m - Math.max(1, +cfg.sparkMonths || 12) + 1);
+      ds = ds.filter((t) => t >= from);
+    } else if (cfg.chartRange === 'days') ds = ds.slice(-Math.max(2, +cfg.sparkDays || 30));
+    if (!ds.length) return null;
+    const reset = (t) => { const [y, m] = ymd(t); return cfg.runReset === 'month' ? monthStart(y, m) : cfg.runReset === 'year' ? Date.UTC(y, 0, 1) : ds[0]; };
+    // amounts and counts add up; ratios, balances and averages are recalculated "to date" (e.g. approval rate so far)
+    const additive = card.kind === 'measure' && c.rollup === 'sum';
+    let run = 0; let start = null;
+    const pts = ds.map((t) => {
+      const day = valueOf(card, c, [t, t]);
+      let cum;
+      if (additive) {
+        const r = reset(t);
+        if (r !== start) { run = 0; start = r; }
+        run += day || 0; cum = run;
+      } else cum = valueOf(card, c, [Math.max(reset(t), ds[0]), t]);
+      return { t, day, cum };
+    });
+    pts.additive = additive;
+    return pts.some((q) => q.day !== null) ? pts : null;
+  }
+
+  function drawChart (b) {
+    const host = b.el.querySelector('.kc-chart');
+    if (!host) return;
+    const W = host.clientWidth; const H = host.clientHeight;
+    if (W < 60 || H < 30) return;
+    const pts = b.chart; const n = pts.length;
+    const showAxis = cfg.chartAxis && H >= 80;
+    const fmtTick = d3.utcFormat(model.grain === 'day' ? '%d-%b' : model.grain === 'month' ? "%b '%y" : '%d-%b');
+    const fs = Math.max(8, (+cfg.detailSize || 11) - 1);
+    const m = { top: 4, right: 2, bottom: showAxis ? Math.round(fs * 0.62 * 6.2) + 6 : 2, left: 2 };
+    const iw = W - m.left - m.right; const ih = H - m.top - m.bottom;
+    if (ih < 16) return;
+    const ct = b.ct;
+    const hasBars = ct === 'combo' || ct === 'bars';
+    const hasDayLine = ct === 'line';
+    const hasRun = ct === 'combo' || ct === 'running';
+    const x = d3.scaleBand().domain(d3.range(n)).range([0, iw]).paddingInner(n > 120 ? 0.15 : 0.3).paddingOuter(0.1);
+    const cx = (i) => x(i) + x.bandwidth() / 2;
+    const ext = (key) => { const v = pts.map((q) => q[key]).filter((q) => q !== null); return v.length ? [Math.min(0, d3.min(v)), Math.max(0, d3.max(v))] : [0, 1]; };
+    const yDay = d3.scaleLinear().domain(ext('day')).nice().range([ih, 0]);
+    // counts and amounts grow from zero; ratios, averages and balances use their own range so changes are visible
+    const fit = (key) => { const v = pts.map((q) => q[key]).filter((q) => q !== null); if (!v.length) return [0, 1]; let [a, z] = d3.extent(v); if (a === z) { a -= Math.abs(a || 1) * 0.05; z += Math.abs(z || 1) * 0.05; } const pad = (z - a) * 0.08; return [a - pad, z + pad]; };
+    const yRun = d3.scaleLinear().domain(pts.additive ? ext('cum') : fit('cum')).nice().range([ih, 0]);
+    if (ct === 'line') yDay.domain(fit('day')).nice();
+
+    const svg = d3.select(host).append('svg').attr('width', W).attr('height', H);
+    const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
+    if (hasBars) {
+      const bw = Math.max(1, x.bandwidth());
+      g.append('g').selectAll('rect').data(pts.filter((q) => q.day !== null)).join('rect')
+        .attr('x', (q) => cx(pts.indexOf(q)) - bw / 2).attr('width', bw)
+        .attr('y', (q) => Math.min(yDay(q.day), yDay(0))).attr('height', (q) => Math.max(0.5, Math.abs(yDay(q.day) - yDay(0))))
+        .attr('fill', b.cols.bar).attr('opacity', ct === 'combo' ? 0.75 : 0.85);
+    }
+    const lineOf = (key, y) => d3.line().defined((q) => q[key] !== null).x((q, i) => cx(i)).y((q) => y(q[key])).curve(d3.curveMonotoneX)(pts);
+    if (ct === 'running') {
+      const gid = `kc-r${b.i}`;
+      const gr = svg.append('defs').append('linearGradient').attr('id', gid).attr('x1', 0).attr('x2', 0).attr('y1', 0).attr('y2', 1);
+      gr.append('stop').attr('offset', '0%').attr('stop-color', b.cols.line).attr('stop-opacity', 0.2);
+      gr.append('stop').attr('offset', '100%').attr('stop-color', b.cols.line).attr('stop-opacity', 0);
+      g.append('path').attr('d', d3.area().defined((q) => q.cum !== null).x((q, i) => cx(i)).y0(ih).y1((q) => yRun(q.cum)).curve(d3.curveMonotoneX)(pts)).attr('fill', `url(#${gid})`);
+    }
+    if (hasRun) g.append('path').attr('d', lineOf('cum', yRun)).attr('fill', 'none').attr('stroke', b.cols.line).attr('stroke-width', 2).attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round');
+    if (hasDayLine) g.append('path').attr('d', lineOf('day', yDay)).attr('fill', 'none').attr('stroke', b.cols.line).attr('stroke-width', 1.6).attr('stroke-linejoin', 'round');
+
+    if (showAxis) {
+      const every = Math.max(1, Math.ceil(n / Math.max(2, Math.floor(iw / (fs + 3)))));
+      const ax = g.append('g').attr('class', 'kc-axis').attr('transform', `translate(0,${ih + 4})`);
+      ax.selectAll('text').data(pts.filter((q, i) => (n - 1 - i) % every === 0)).join('text')
+        .attr('transform', (q) => `translate(${cx(pts.indexOf(q)) + fs * 0.35},0) rotate(-90)`)
+        .attr('text-anchor', 'end').style('font-size', fs + 'px').text((q) => fmtTick(new Date(q.t)));
+    }
+
+    // hover: the date, its value and the running total
+    const guide = g.append('line').attr('class', 'kc-guide').attr('y1', 0).attr('y2', ih).attr('display', 'none');
+    const dot = g.append('circle').attr('r', 3.2).attr('fill', b.cols.line).attr('stroke', '#fff').attr('stroke-width', 1.5).attr('display', 'none');
+    const fmtV = (v) => fmtCard(v, b.c, b.unit);
+    g.append('rect').attr('width', iw).attr('height', ih).attr('fill', 'transparent').style('cursor', 'crosshair')
+      .on('mousemove', (ev) => {
+        const [mx] = d3.pointer(ev);
+        const i = Math.max(0, Math.min(n - 1, Math.floor((mx - x(0) + x.step() * x.paddingInner() / 2) / x.step())));
+        const q = pts[i];
+        guide.attr('display', null).attr('x1', cx(i)).attr('x2', cx(i));
+        if (hasRun && q.cum !== null) dot.attr('display', null).attr('cx', cx(i)).attr('cy', yRun(q.cum)); else if (hasDayLine && q.day !== null) dot.attr('display', null).attr('cx', cx(i)).attr('cy', yDay(q.day)); else dot.attr('display', 'none');
+        const rows = [];
+        if (ct !== 'running') rows.push([dayName(), fmtV(q.day)]);
+        if (hasRun || ct === 'bars' || ct === 'line') rows.push([runName() === 'Cumulative' ? 'Running total' : runName(), fmtV(q.cum)]);
+        showTooltip(`<div class="kc-tt-head">${esc(fmtRange([q.t, q.t]))}</div>` + rows.map(([k, v]) => `<div class="kc-tt-row"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join(''), ev);
+      })
+      .on('mouseleave', () => { guide.attr('display', 'none'); dot.attr('display', 'none'); hideTooltip(); });
   }
 
   // the same big-number size on every card, as large as the smallest card allows
@@ -490,7 +621,7 @@
       if (!v) continue;
       const cw = b.el.clientWidth - 28; const ch = b.el.clientHeight;
       const chars = Math.max(3, v.textContent.length);
-      size = Math.min(size, cw / (chars * 0.6), ch * 0.3);
+      size = Math.min(size, cw / (chars * 0.6), ch * (b.chart ? 0.18 : 0.3));
     }
     size = Math.max(14, Math.floor(size));
     vals.forEach((v) => { v.style.fontSize = size + 'px'; });
@@ -605,6 +736,7 @@
     try { const raw = tableau.extensions.settings.get('config'); if (raw) saved = JSON.parse(raw); } catch (e) { /* none */ }
     cfg = { ...DEFAULTS, ...saved };
     cfg.measures = cfg.measures || {}; cfg.calcs = cfg.calcs || []; cfg.order = cfg.order || [];
+    if (!saved.chartType && saved.sparkline === 'none') cfg.chartType = 'none'; // settings from 1.0–1.2
   }
 
   async function openFormatDialog () {

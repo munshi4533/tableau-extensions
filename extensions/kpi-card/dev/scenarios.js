@@ -49,3 +49,17 @@ MockTableau.scenario('twoYears', (M) => {
   const data = loanDays(M, Date.UTC(2024, 10, 1), Date.UTC(2026, 10, 8));
   return { columns: LOAN_COLS, data, encodings: [{ id: 'date', field: M.field(LOAN_COLS[0]) }, ...LOAN_COLS.slice(1).map((c) => ({ id: 'measures', field: M.field(c) }))] };
 });
+
+MockTableau.scenario('funnel', (M) => {
+  // lending funnel per day (like Initiated / Submitted / Approved / Disbursed cards)
+  const columns = ['DAY(Created Date)', 'CNT(Initiated)', 'CNT(Submitted)', 'CNT(Approved)', 'CNT(Disbursed)'];
+  const data = [];
+  for (let t = Date.UTC(2026, 0, 6), i = 0; t <= Date.UTC(2026, 10, 8); t += 864e5, i++) {
+    const d = new Date(t);
+    const spike = i >= 218 && i <= 222 ? 6 - Math.abs(220 - i) * 2 : 1;
+    const base = (300 + i * 7 + Math.abs(Math.sin(i * 1.7)) * 900) * spike;
+    const ini = Math.round(base); const sub = Math.round(ini * 0.19); const app = Math.round(sub * (0.8 + 0.1 * Math.sin(i / 40))); const dis = Math.round(app * (0.18 + i * 0.0012));
+    data.push([M.dv(M.iso(d), d, M.fmtDay(d)), ...[ini, sub, app, dis].map((v) => M.dv(v, v, M.fmtInt(v)))]);
+  }
+  return { columns, data, encodings: [{ id: 'date', field: M.field(columns[0]) }, ...columns.slice(1).map((c) => ({ id: 'measures', field: M.field(c) }))] };
+});

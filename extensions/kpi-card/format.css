@@ -120,3 +120,7 @@ section h2 { margin-bottom: 4px; }
 .fx-help code { font-family: ui-monospace, Menlo, Consolas, monospace; background: white; border: 1px solid #e3def9; border-radius: 4px; padding: 0 4px; }
 
 .fx-grid[hidden] { display: none; }
+
+.chips.sp { gap: 2px 14px; margin-top: 4px; }
+.chips.sp .fx-check { margin: 3px 0; font-weight: 400; }
+section[hidden] { display: none; }

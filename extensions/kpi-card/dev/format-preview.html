@@ -4,13 +4,13 @@
   <base href="../" />
   <!-- GENERATED preview (tools/build.py): sample data instead of Tableau -->
   <meta charset="utf-8" />
-  <meta name="ext-version" content="1.2.0" />
+  <meta name="ext-version" content="1.3.0" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Format KPI Card (preview)</title>
-  <link rel="stylesheet" href="./format.css?v=1.2.0" />
+  <link rel="stylesheet" href="./format.css?v=1.3.0" />
   <script>window.tableau = window.parent.__mockDialogTableau;</script>
-  <script src="./kpi-formula.js?v=1.2.0"></script>
-  <script src="./format.js?v=1.2.0" defer></script>
+  <script src="./kpi-formula.js?v=1.3.0"></script>
+  <script src="./format.js?v=1.3.0" defer></script>
 </head>
 <body>
   <form id="form" class="fx" autocomplete="off">
@@ -20,6 +20,7 @@
       <nav class="fx-tabs" id="tabs">
         <button type="button" data-tab="cards" class="on">Cards</button>
         <button type="button" data-tab="number">Big number</button>
+        <button type="button" data-tab="chart">Chart</button>
         <button type="button" data-tab="look">Look</button>
       </nav>
     </header>
@@ -39,22 +40,73 @@
           <h2>Big number</h2>
           <div class="fx-grid">
             <label class="fx-field">Show
-              <select name="period"><option value="day">Last day</option><option value="mtd">Month to date (MTD)</option><option value="lastmonth">Last month (full)</option><option value="ytd">Year to date (YTD)</option></select>
+              <select name="period"><option value="day">Last day</option><option value="mtd">Month to date (MTD)</option><option value="lastmonth">Last month (full)</option><option value="ytd">Year to date (YTD)</option><option value="total">Total (all dates)</option></select>
             </label>
             <label class="fx-field">Compare with
               <select name="compare"><option value="auto">Automatic (prev. day · LMTD · prev. month · LYTD)</option><option value="yoy">Same period last year</option><option value="none">Nothing</option></select>
             </label>
           </div>
           <p class="fx-hint" id="periodHint">All cards use this unless a card picks its own. "Last day" is the latest date in the data; MTD runs from the 1st to that date and is compared with the same days of last month (LMTD). YTD runs from 1 January and is compared with the same days last year (LYTD).</p>
-          <label class="fx-check"><input type="checkbox" name="switcher" /> Viewer buttons: Last day / MTD / Last month / YTD <small>(switch every card at once; untick to hide them)</small></label>
+          <label class="fx-check"><input type="checkbox" name="switcher" /> Viewer buttons <small>(switch every card at once; untick to hide them)</small></label>
+          <div class="fx-field">Periods to offer <small style="color:var(--ink-3);font-weight:400">(buttons and small values)</small>
+            <div class="chips sp" id="switchPeriods">
+              <label class="fx-check"><input type="checkbox" data-sp="day"> Last day</label>
+              <label class="fx-check"><input type="checkbox" data-sp="mtd"> MTD</label>
+              <label class="fx-check"><input type="checkbox" data-sp="lastmonth"> Last month</label>
+              <label class="fx-check"><input type="checkbox" data-sp="ytd"> YTD</label>
+              <label class="fx-check"><input type="checkbox" data-sp="total"> Total</label>
+            </div>
+          </div>
+          <p class="fx-hint">Total adds up every date in the data, so it follows your Tableau filters (e.g. this year). It has no comparison.</p>
         </section>
         <section>
           <h2>Under the number</h2>
           <label class="fx-check"><input type="checkbox" name="showRange" /> Period and dates (MTD · 1–8 Nov 2026)</label>
           <label class="fx-check"><input type="checkbox" name="secondary" /> The other periods as small values</label>
           <label class="fx-check"><input type="checkbox" name="progress" /> Target progress bar <small>(cards with a target)</small></label>
-          <label class="fx-field">Mini trend line
-            <select name="sparkline"><option value="auto">Automatic</option><option value="months">Month by month</option><option value="days">Day by day</option><option value="none">None</option></select>
+
+        </section>
+      </div>
+
+      <div class="fx-tab" data-pane="chart" hidden>
+        <section>
+          <h2>Chart under the number</h2>
+          <label class="fx-field">Chart
+            <select name="chartType">
+              <option value="spark">Mini trend line</option>
+              <option value="combo">Bars per date + running total</option>
+              <option value="bars">Bars per date</option>
+              <option value="line">Line per date</option>
+              <option value="running">Running total</option>
+              <option value="none">None</option>
+            </select>
+          </label>
+          <p class="fx-hint">Every card uses this unless it picks its own chart (Cards → Number format, target &amp; chart).</p>
+        </section>
+        <section id="fullChart">
+          <h2>Dates and running total</h2>
+          <div class="fx-grid">
+            <label class="fx-field">Dates
+              <select name="chartRange"><option value="all">All dates in the data</option><option value="months">Last … months</option><option value="days">Last … days</option></select>
+            </label>
+            <label class="fx-field" id="chartMonthsField">Months
+              <select name="sparkMonths" data-twin="1"><option>1</option><option>2</option><option>3</option><option>6</option><option>9</option><option>12</option><option>18</option><option>24</option><option>36</option></select>
+            </label>
+            <label class="fx-field" id="chartDaysField">Days
+              <select name="sparkDays" data-twin="1"><option>7</option><option>14</option><option>30</option><option>60</option><option>90</option><option>180</option><option>365</option></select>
+            </label>
+            <label class="fx-field">Running total
+              <select name="runReset"><option value="none">Adds up over all dates shown</option><option value="month">Restarts each month (MTD)</option><option value="year">Restarts each year (YTD)</option></select>
+            </label>
+          </div>
+          <label class="fx-check"><input type="checkbox" name="chartAxis" /> Date labels under the chart</label>
+          <label class="fx-check"><input type="checkbox" name="chartLegend" /> Legend next to the name (● Cumulative ● Day)</label>
+          <p class="fx-hint">Amounts and counts add up day by day. Ratios, averages and balances are recalculated "to date", e.g. Approval Rate = all approved so far ÷ all submitted so far. Bar and line colors can be set per card in Cards.</p>
+        </section>
+        <section id="miniChart">
+          <h2>Mini trend line</h2>
+          <label class="fx-field" id="sparkModeField">Mini trend: month or day
+            <select name="sparkline"><option value="auto">Automatic</option><option value="months">Month by month</option><option value="days">Day by day</option></select>
           </label>
           <div class="fx-grid" id="sparkRange">
             <label class="fx-field" id="sparkMonthsField">Months to show
@@ -67,7 +119,7 @@
               <select name="sparkDays"><option>7</option><option>14</option><option>30</option><option>60</option><option>90</option><option>180</option><option>365</option></select>
             </label>
           </div>
-          <p class="fx-hint">Automatic uses days for Last day (or short history) and months otherwise. Month by month is like for like: with MTD each month covers the same days (1st–8th), with Last month full months.</p>
+          <p class="fx-hint" id="sparkHint">Automatic uses days for Last day (or short history) and months otherwise. Month by month is like for like: with MTD each month covers the same days (1st–8th), with Last month full months.</p>
         </section>
       </div>
 

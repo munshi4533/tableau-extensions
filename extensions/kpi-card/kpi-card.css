@@ -81,3 +81,18 @@ html, body {
 .kc-tt-row b.big { font-size: 12px; }
 .kc-tt-row i { color: var(--ink-3); font-style: normal; font-size: 10px; }
 .kc-tt-sub { border-top: 1px solid var(--track); margin-top: 5px; padding-top: 4px; color: var(--ink-3); font-size: 10px; word-break: break-word; }
+
+/* header row: name + chart legend */
+.kc-head { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
+.kc-head .kc-label { flex: 1 1 auto; }
+.kc-card.center .kc-head { justify-content: center; }
+.kc-card.center .kc-head .kc-label { flex: 0 1 auto; }
+.kc-legend { display: flex; gap: 8px; flex: none; font-size: calc(var(--detail-size) - 1px); color: var(--ink-3); white-space: nowrap; padding-top: 2px; }
+.kc-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.kc-legend i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+
+/* full chart: bars per date + running total */
+.kc-chart { flex: 1 1 auto; min-height: 40px; width: 100%; margin-top: 6px; }
+.kc-chart svg { display: block; overflow: visible; }
+.kc-axis text { fill: var(--ink-3); font-family: inherit; }
+.kc-guide { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 3; pointer-events: none; }
