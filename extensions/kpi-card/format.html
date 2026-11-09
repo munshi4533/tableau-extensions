@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="ext-version" content="1.4.0" />
+  <meta name="ext-version" content="1.5.0" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Format KPI Card</title>
-  <link rel="stylesheet" href="./format.css?v=1.4.0" />
-  <script src="../../shared/lib/tableau.extensions.1.latest.min.js?v=1.4.0"></script>
-  <script src="./kpi-formula.js?v=1.4.0"></script>
-  <script src="./format.js?v=1.4.0" defer></script>
+  <link rel="stylesheet" href="./format.css?v=1.5.0" />
+  <script src="../../shared/lib/tableau.extensions.1.latest.min.js?v=1.5.0"></script>
+  <script src="./kpi-formula.js?v=1.5.0"></script>
+  <script src="./format.js?v=1.5.0" defer></script>
 </head>
 <body>
   <form id="form" class="fx" autocomplete="off">
@@ -56,6 +56,17 @@
             </div>
           </div>
           <p class="fx-hint">Total adds up every date in the data, so it follows your Tableau filters (e.g. this year). It has no comparison.</p>
+        </section>
+        <section>
+          <h2>Status icon</h2>
+          <label class="fx-check"><input type="checkbox" name="statusIcon" /> Round trend icon left of the big number <small>(arrow = direction, color = status)</small></label>
+          <div class="fx-grid">
+            <label class="fx-field">Icon style
+              <select name="iconStyle"><option value="soft">Soft (tinted circle)</option><option value="solid">Solid (filled circle)</option></select>
+            </label>
+          </div>
+          <label class="fx-check"><input type="checkbox" name="colorNumber" /> Color the big number too</label>
+          <p class="fx-hint">Green / yellow / red is set per card (Cards → Number format, target, chart &amp; icon color): by change, by value thresholds or by % of target. Leave yellow empty for green / red only.</p>
         </section>
         <section>
           <h2>Under the number</h2>

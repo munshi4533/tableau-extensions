@@ -25,6 +25,9 @@
     chartLegend: true, // "● Running total ● Day" next to the card name
     lineCurve: 'extra', // straight | smooth | extra   (lines in charts and the mini trend)
     barRound: true, // rounded ends on bars (top and bottom)
+    statusIcon: true, // round trend icon left of the big number, colored green / yellow / red
+    iconStyle: 'soft', // soft (tinted circle) | solid (filled circle)
+    colorNumber: false, // also color the big number
     compare: 'auto', // auto (previous day / LMTD / previous month) | yoy | none
     title: '',
     columns: 'auto', // auto | 1..6
@@ -51,7 +54,9 @@
     label: '', hidden: false, rollup: 'sum', period: '', better: 'up',
     format: 'auto', decimals: 'auto', prefix: '', suffix: '', color: '',
     targetType: 'none', targetValue: '', targetKey: '', targetFormula: '',
-    chartType: '', barColor: '', lineColor: '' // '' = as set for all cards
+    chartType: '', barColor: '', lineColor: '', // '' = as set for all cards
+    statusRule: 'change', // what decides green / yellow / red: change | value | target
+    statusGood: '', statusWarn: '', statusBand: '' // thresholds (see statusOf)
   };
   const LINE_DEFAULT = '#eda100';
   const ROLLUPS = { sum: 'Sum of days', last: 'Latest value', avg: 'Average of days', max: 'Highest day', min: 'Lowest day' };
@@ -307,8 +312,8 @@
     return first ? { prefix: first.unit.pct ? '' : first.unit.prefix, suffix: '', pct: false, scale: 1, decimals: 0, calc: true } : null;
   }
 
-  function targetOf (card, c, p, range, v) {
-    if (!cfg.progress || c.targetType === 'none' || v === null) return null;
+  function targetOf (card, c, p, range, v, force) {
+    if ((!cfg.progress && !force) || c.targetType === 'none' || v === null) return null;
     let T = null; let pace = null; let caption = 'target';
     if (c.targetType === 'fixed') {
       if (p === 'total') return null; // a monthly target has no meaning for "all dates"
@@ -468,6 +473,8 @@
       dinfo = change(v, b, c, unit);
       delta = `<div class="kc-delta ${dinfo.tone}"><b>${dinfo.arrow} ${esc(dinfo.text)}</b> <span>${esc(cmp.caption)}</span></div>`;
     }
+    const st = statusOf(c, v, dinfo, targetOf(card, c, p, range, v, true), unit);
+    const icon = cfg.statusIcon && v !== null ? statusIcon(st, dinfo ? dinfo.dir : null) : '';
     const others = cfg.secondary ? offeredPeriods().filter((q) => q !== p) : [];
     const sec = others.length ? `<div class="kc-sec">${others.map((q) => `<span>${esc(periodLabel(q))} <b>${esc(fmt(valueOf(card, c, rangeOf(q))))}</b></span>`).join('')}</div>` : '';
     let prog = '';
@@ -483,7 +490,7 @@
       ? `<div class="kc-legend"><span><i style="background:${cols.line}"></i>${esc(runName())}</span><span><i style="background:${cols.bar}"></i>${esc(dayName())}</span></div>` : '';
     el.innerHTML =
       `<div class="kc-head"><div class="kc-label"><span class="kc-name">${esc(name)}</span>${cfg.showRange ? `<span class="kc-range">${esc(periodLabel(p))} · ${esc(fmtRange(range))}</span>` : ''}</div>${legend}</div>` +
-      `<div class="kc-value">${esc(fmt(v))}</div>${delta}${sec}${prog}${ct === 'spark' ? '<div class="kc-spark"></div>' : ct === 'none' ? '' : '<div class="kc-chart"></div>'}`;
+      `<div class="kc-value${cfg.colorNumber && st !== 'neutral' ? ' s-' + st : ''}">${icon}<span>${esc(fmt(v))}</span></div>${delta}${sec}${prog}${ct === 'spark' ? '<div class="kc-spark"></div>' : ct === 'none' ? '' : '<div class="kc-chart"></div>'}`;
 
     // hover: what's behind the number
     el.addEventListener('mousemove', (e) => {
@@ -614,6 +621,51 @@
       .on('mouseleave', () => { guide.attr('display', 'none'); dot.attr('display', 'none'); hideTooltip(); });
   }
 
+  // ---------------------------------------------------------------- status: green / yellow / red
+  // change (default): growing in the good direction = green, the other way = red; a small change
+  //   within "Flat band" (e.g. ±2%) = yellow
+  // value: the number against two thresholds (e.g. Approval Rate: green ≥ 85%, yellow ≥ 75%, else red)
+  // target: % of target, against where MTD/YTD should be today (green ≥ 100%, yellow ≥ 90%)
+  function statusOf (c, v, dinfo, tgt, unit) {
+    const rule = c.statusRule || 'change';
+    const up = c.better !== 'down';
+    const pctNum = (s, def) => { const x = parseFloat(String(s ?? '').replace(/[%\s,]/g, '')); return Number.isFinite(x) ? x : def; };
+    if (rule === 'value') {
+      let g = parseAmount(c.statusGood); let w = parseAmount(c.statusWarn);
+      if (isPct(c, unit)) { // "85" or "85%" both mean 85% on a % card
+        if (g !== null && !/%/.test(c.statusGood) && Math.abs(g) > 1.5) g /= 100;
+        if (w !== null && !/%/.test(c.statusWarn) && Math.abs(w) > 1.5) w /= 100;
+      }
+      if (g === null || v === null) return 'neutral';
+      if (up ? v >= g : v <= g) return 'good';
+      if (w !== null && (up ? v >= w : v <= w)) return 'warn';
+      return 'bad';
+    }
+    if (rule === 'target') {
+      if (!tgt) return 'neutral';
+      const r = (tgt.pace ? tgt.pct / tgt.pace : tgt.pct) * 100;
+      const g = pctNum(c.statusGood, 100); const w = pctNum(c.statusWarn, null); // no yellow threshold = only green / red
+      if (up ? r >= g : r <= g) return 'good';
+      if (w !== null && (up ? r >= w : r <= w)) return 'warn';
+      return 'bad';
+    }
+    if (!dinfo || c.better === 'none') return 'neutral';
+    const band = pctNum(c.statusBand, 0);
+    const size = dinfo.pp ? Math.abs(dinfo.d * 100) : dinfo.pct === null ? Infinity : Math.abs(dinfo.pct * 100);
+    if (band > 0 && size <= band) return 'warn';
+    return dinfo.tone === 'good' ? 'good' : dinfo.tone === 'bad' ? 'bad' : 'warn';
+  }
+  const ICON_PATHS = {
+    up: '<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+    down: '<path d="M3 7l6 6 4-4 8 8"/><path d="M15 17h6v-6"/>',
+    flat: '<path d="M4 12h15"/><path d="M15 8l4 4-4 4"/>',
+    dot: '<circle cx="12" cy="12" r="3.5" fill="currentColor"/>'
+  };
+  function statusIcon (st, dir) {
+    const shape = dir === 'up' || dir === 'down' || dir === 'flat' ? dir : 'dot';
+    return `<i class="kc-ico s-${st}${cfg.iconStyle === 'solid' ? ' solid' : ''}" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${ICON_PATHS[shape]}</svg></i>`;
+  }
+
   // the same big-number size on every card, as large as the smallest card allows
   function fitValues (built) {
     const vals = built.map((b) => b.el.querySelector('.kc-value')).filter(Boolean);
@@ -624,7 +676,7 @@
       const v = b.el.querySelector('.kc-value');
       if (!v) continue;
       const cw = b.el.clientWidth - 28; const ch = b.el.clientHeight;
-      const chars = Math.max(3, v.textContent.length);
+      const chars = Math.max(3, v.textContent.length) + (v.querySelector('.kc-ico') ? 1.5 : 0);
       size = Math.min(size, cw / (chars * 0.6), ch * (b.chart ? 0.18 : 0.3));
     }
     size = Math.max(14, Math.floor(size));
@@ -677,7 +729,7 @@
     if (pp) text = `${sign}${Math.abs(d * 100).toFixed(1)} pp`;
     else if (pct === null) text = 'new';
     else { const a = Math.abs(pct * 100); text = `${sign}${a >= 100 ? Math.round(a).toLocaleString('en-US') : a.toFixed(1)}%`; }
-    return { tone, arrow, text, abs: pp ? '' : `${sign}${fmtCard(Math.abs(d), c, unit)}` };
+    return { tone, arrow, text, dir, pct, pp, d, abs: pp ? '' : `${sign}${fmtCard(Math.abs(d), c, unit)}` };
   }
 
   function fmtCard (v, c, unit) {
@@ -706,9 +758,9 @@
 
   // "1.2M", "1,200 Mn", "850k", "1e6" -> number
   function parseAmount (s) {
-    const m = String(s || '').replace(/,/g, '').trim().match(/^(-?\d*\.?\d+(?:e[+-]?\d+)?)\s*(k|m|mn|b|bn)?$/i);
+    const m = String(s || '').replace(/,/g, '').trim().match(/^(-?\d*\.?\d+(?:e[+-]?\d+)?)\s*(k|m|mn|b|bn|%)?$/i);
     if (!m) return null;
-    const mult = { k: 1e3, m: 1e6, mn: 1e6, b: 1e9, bn: 1e9 }[(m[2] || '').toLowerCase()] || 1;
+    const mult = { k: 1e3, m: 1e6, mn: 1e6, b: 1e9, bn: 1e9, '%': 0.01 }[(m[2] || '').toLowerCase()] || 1;
     return parseFloat(m[1]) * mult;
   }
 

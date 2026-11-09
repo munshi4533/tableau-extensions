@@ -96,3 +96,20 @@ html, body {
 .kc-chart svg { display: block; overflow: visible; }
 .kc-axis text { fill: var(--ink-3); font-family: inherit; }
 .kc-guide { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 3 3; pointer-events: none; }
+
+/* status icon: shape = direction, color = green / yellow / red */
+.kc-value { display: flex; align-items: center; gap: 0.22em; }
+.kc-card.center .kc-value { justify-content: center; }
+.kc-ico { flex: none; display: inline-grid; place-items: center; width: 0.82em; height: 0.82em; border-radius: 50%; }
+.kc-ico svg { width: 0.5em; height: 0.5em; }
+.kc-ico.s-good { color: #0b8a0b; background: #e3f4e3; }
+.kc-ico.s-warn { color: #a06a00; background: #fbf0d6; }
+.kc-ico.s-bad { color: #c62f2f; background: #fbe6e6; }
+.kc-ico.s-neutral { color: var(--ink-3); background: #efeeea; }
+.kc-ico.solid.s-good { color: #fff; background: #0ca30c; }
+.kc-ico.solid.s-warn { color: #fff; background: #e5a000; }
+.kc-ico.solid.s-bad { color: #fff; background: #d03b3b; }
+.kc-ico.solid.s-neutral { color: #fff; background: #a5a49e; }
+.kc-value.s-good span { color: #006300; }
+.kc-value.s-warn span { color: #8a5d00; }
+.kc-value.s-bad span { color: #b02a2a; }

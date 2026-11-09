@@ -150,8 +150,8 @@
           <label class="fx-field">Big number<select data-f="period">${opts([['', 'As set in Big number tab'], ['day', 'Last day'], ['mtd', 'MTD'], ['lastmonth', 'Last month'], ['ytd', 'YTD']], c.period)}</select></label>
           <label class="fx-field">Good direction<select data-f="better">${opts([['up', 'Higher is better'], ['down', 'Lower is better'], ['none', 'Neutral (no colors)']], c.better)}</select></label>
         </div>
-        <details${c.format !== 'auto' || c.prefix || c.suffix || c.decimals !== 'auto' || c.targetType !== 'none' || c.chartType ? ' open' : ''}>
-          <summary>Number format, target &amp; chart</summary>
+        <details${c.format !== 'auto' || c.prefix || c.suffix || c.decimals !== 'auto' || c.targetType !== 'none' || c.chartType || c.statusRule !== 'change' || c.statusBand ? ' open' : ''}>
+          <summary>Number format, target, chart &amp; icon color</summary>
           <div class="row">
             <label class="fx-field">Format<select data-f="format">${opts([['auto', isCalc ? 'Automatic' : 'As in Tableau'], ['number', '1,234,567'], ['compact', 'Short (K / M / B)'], ['k', 'Thousands (K)'], ['m', 'Millions (M)'], ['mn', 'Millions (Mn)'], ['b', 'Billions (B)'], ['percent', 'Percent (0.25 → 25%)']], c.format)}</select></label>
             <label class="fx-field">Decimals<select data-f="decimals">${opts([['auto', 'Auto'], ['0', '0'], ['1', '1'], ['2', '2'], ['3', '3']], c.decimals)}</select></label>
@@ -171,6 +171,16 @@
             <label class="fx-color">Bars <input type="color" data-f="barColor" value="${esc(c.barColor || color)}"></label>
             <label class="fx-color">Line <input type="color" data-f="lineColor" value="${esc(c.lineColor || '#eda100')}"></label>
           </div>
+          <div class="row">
+            <label class="fx-field">Icon color by<select data-f="statusRule">${opts([['change', 'Change vs comparison'], ['value', 'Value thresholds'], ['target', '% of target']], c.statusRule)}</select></label>
+            ${c.statusRule === 'value' ? `<label class="fx-field">Green ${c.better === 'down' ? 'up to' : 'from'}<input type="text" data-f="statusGood" value="${esc(c.statusGood)}" placeholder="e.g. 1,000 · 250K · 65%"></label>
+            <label class="fx-field">Yellow ${c.better === 'down' ? 'up to' : 'from'} <small>(optional)</small><input type="text" data-f="statusWarn" value="${esc(c.statusWarn)}" placeholder="empty = green / red only"></label>` : ''}
+            ${c.statusRule === 'target' ? `<label class="fx-field">Green ${c.better === 'down' ? 'up to' : 'from'} (% of target)<input type="text" data-f="statusGood" value="${esc(c.statusGood)}" placeholder="100"></label>
+            <label class="fx-field">Yellow ${c.better === 'down' ? 'up to' : 'from'} <small>(optional)</small><input type="text" data-f="statusWarn" value="${esc(c.statusWarn)}" placeholder="empty = green / red only"></label>` : ''}
+            ${c.statusRule === 'change' ? `<label class="fx-field">Flat band ± <small>(optional)</small><input type="text" data-f="statusBand" value="${esc(c.statusBand)}" placeholder="e.g. 2 (% or pp) = yellow"></label>` : ''}
+          </div>
+          ${c.statusRule === 'target' && c.targetType === 'none' ? '<p class="fx-hint warn">Set a target above to use % of target.</p>' : ''}
+          ${c.statusRule === 'target' && c.targetType !== 'none' ? '<p class="fx-hint">For MTD and YTD the % of target is measured against where you should be today (pace).</p>' : ''}
         </details>
       </div>`;
     }).join('');
@@ -189,7 +199,7 @@
     }
     if (f === 'label') { const nm = box.querySelector('.nm'); if (nm) nm.textContent = el.value || (card.kind === 'calc' ? 'Calculated KPI' : card.m.name); }
     if (f === 'hidden') box.classList.toggle('off', el.checked);
-    if (f === 'targetType') { drawCards(); }
+    if (f === 'targetType' || f === 'statusRule' || f === 'better') { drawCards(); }
     if (f === 'chartType') refresh();
     scheduleSave();
   }
