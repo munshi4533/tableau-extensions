@@ -41,6 +41,7 @@ A row of KPI cards from a **plain date** and **your measures**. The extension wo
 Clicking a bar or a trend-line point selects the marks of that date (a point on the month-by-month trend selects all days of that month). In Tableau: **Dashboard → Actions → Add Action → Filter**, Source sheet = the KPI Card sheet, Run action on **Select**, choose the target sheets. If the target sheets use a different date field, pick **Selected fields** and map the KPI Card's date to each target's date.
 
 ## Version history
+- **1.8.3**: On Tableau Server, a slow first filter action no longer blanks the cards: they stay visible (faded, with "Updating…") while Tableau finishes the query, then update. "No data" only appears if the filter really leaves nothing.
 - **1.8.2**: Smoother when other sheets filter the cards (dashboard actions): no blank "No data" flash while Tableau applies the filter, and no redraw when the data didn't change.
 - **1.8.1**: The clicked card's big number shows the selected month / day ("Selected · Nov 2026"), including calculated KPIs and several selected months; it goes back to the period when the selection is cleared.
 - **1.8.0**: Click a bar (or a point on the mini trend line) to select that day or month in Tableau, so dashboard filter and highlight actions work from KPI Card. Cmd / Ctrl + click adds more; click again or on an empty spot to clear.

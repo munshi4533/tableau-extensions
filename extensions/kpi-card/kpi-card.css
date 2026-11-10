@@ -122,3 +122,10 @@ html, body {
 .kc-spark svg, .kc-chart svg { cursor: pointer; }
 
 .kc-range.sel { color: var(--ink-1); font-weight: 600; }
+
+/* slow update (e.g. Tableau Server applying a dashboard filter): keep the chart, faded, with a small badge */
+body.is-updating #cards, body.is-updating #header { opacity: .5; transition: opacity .2s; }
+.ext-updating { position: fixed; top: 6px; right: 8px; z-index: 30; display: none; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; background: #fff; border: 1px solid rgba(11,11,11,.12); box-shadow: 0 2px 8px rgba(0,0,0,.08); font-size: 11px; color: #52514e; }
+body.is-updating .ext-updating { display: inline-flex; }
+.ext-updating i { width: 10px; height: 10px; border-radius: 50%; border: 2px solid #d9d8d2; border-top-color: #2a78d6; animation: ext-spin .8s linear infinite; }
+@keyframes ext-spin { to { transform: rotate(360deg); } }

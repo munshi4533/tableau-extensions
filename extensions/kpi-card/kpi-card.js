@@ -123,15 +123,27 @@
   //    (shows "No data" only when it stays empty);
   //  - the same data again (duplicate events, selections) does not redraw anything.
   let lastSig = ''; let emptyTries = 0;
+  const EMPTY_WAITS = [400, 800, 1500, 3000, 4500];
+  let updTimer = 0;
+  function setUpdating (on) {
+    clearTimeout(updTimer);
+    let badge = document.getElementById('updating');
+    if (on && !badge) { badge = document.createElement('div'); badge.id = 'updating'; badge.className = 'ext-updating'; badge.innerHTML = '<i></i>Updating…'; document.body.appendChild(badge); }
+    document.body.classList.toggle('is-updating', !!on);
+  }
   async function load () {
     if (loading) { loadAgain = true; return; }
     loading = true; loadAgain = false;
-    let changed = false;
+    let changed = false; let waiting = false;
+    // a slow answer (Tableau Server): show "Updating…" after a moment instead of looking frozen
+    if (lastData) updTimer = setTimeout(() => setUpdating(true), 450);
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const [data, enc] = await Promise.all([getRows(), getEncodings()]);
-        if (!data.rows.length && lastData && lastData.rows.length && emptyTries < 3) {
-          emptyTries++; setTimeout(refresh, 350 * emptyTries); break;
+        // Tableau Server can answer "no rows" for several seconds on a cold filter query: keep the chart
+        // (faded, "Updating…") and ask again with growing gaps, ~10 s in total, before showing "No data"
+        if (!data.rows.length && lastData && lastData.rows.length && emptyTries < EMPTY_WAITS.length) {
+          setUpdating(true); setTimeout(refresh, EMPTY_WAITS[emptyTries++]); waiting = true; break;
         }
         emptyTries = 0;
         const sig = signature(data, enc);
@@ -145,6 +157,7 @@
       }
     }
     loading = false;
+    if (!waiting) setUpdating(false);
     if (changed) render();
     if (loadAgain) load();
   }

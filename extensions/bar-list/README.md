@@ -30,5 +30,6 @@ Ranked bars for one dimension, e.g. Salary Bucket, Simah Score or Employment, sh
 - **Many bars:** the list scrolls instead of squeezing the bars.
 
 ## Version history
+- **1.0.2**: On Tableau Server, a slow first filter action no longer blanks the bars: they stay visible (faded, with "Updating…") until the new data arrives.
 - **1.0.1**: Fixed "Cannot use the same icon for more than one encoding" when adding the extension (Measures and Target shared an icon).
 - **1.0.0**: First release.
