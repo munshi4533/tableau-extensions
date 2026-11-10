@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="ext-version" content="1.0.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Format Bar List</title>
+  <link rel="stylesheet" href="./format.css?v=1.0.0" />
+  <script src="../../shared/lib/tableau.extensions.1.latest.min.js?v=1.0.0"></script>
+  <script src="./kpi-formula.js?v=1.0.0"></script>
+  <script src="./format.js?v=1.0.0" defer></script>
+</head>
+<body>
+  <form id="form" class="fx" autocomplete="off">
+    <header class="fx-top">
+      <h1>Format Bar List</h1>
+      <p>Changes preview live on the sheet.</p>
+      <nav class="fx-tabs" id="tabs">
+        <button type="button" data-tab="kpis" class="on">KPIs</button>
+        <button type="button" data-tab="bars">Bars</button>
+        <button type="button" data-tab="look">Look</button>
+      </nav>
+    </header>
+
+    <main class="fx-body">
+      <div class="fx-tab" data-pane="kpis">
+        <section>
+          <div class="fx-grid">
+            <label class="fx-field">Show first <select name="kpi" id="kpiSelect"></select></label>
+          </div>
+          <label class="fx-check"><input type="checkbox" name="switcher" /> Buttons to switch KPI <small>(when there are several)</small></label>
+        </section>
+        <div class="fx-help">
+          One card per measure on the <b>Measures</b> shelf. <b>Calculated KPIs</b> are worked out per bar from the measures, e.g. Avg Loan = <code>[Loan Amount] / [Customers]</code> (also correct for "Others").
+        </div>
+        <div id="kpis"></div>
+        <button type="button" id="addCalc" class="fx-btn ghost add">+ Calculated KPI</button>
+      </div>
+
+      <div class="fx-tab" data-pane="bars" hidden>
+        <section>
+          <h2>Order and Top N</h2>
+          <div class="fx-grid">
+            <label class="fx-field">Sort
+              <select name="sort"><option value="desc">Value: high → low</option><option value="asc">Value: low → high</option><option value="alpha">Name: A → Z</option><option value="tableau">As sorted in Tableau</option></select>
+            </label>
+            <label class="fx-field">Show
+              <select name="topN"><option value="0">All bars</option><option value="3">Top 3</option><option value="5">Top 5</option><option value="8">Top 8</option><option value="10">Top 10</option><option value="15">Top 15</option><option value="20">Top 20</option><option value="25">Top 25</option></select>
+            </label>
+          </div>
+          <label class="fx-check"><input type="checkbox" name="others" /> Group the rest as "Others" <small>(with Top N)</small></label>
+          <label class="fx-check"><input type="checkbox" name="nullLast" /> Null / Not Available last, in grey <small>(never takes a Top N place)</small></label>
+          <p class="fx-hint">Top N ranks by the KPI shown, so switching KPI can change the top bars.</p>
+        </section>
+        <section>
+          <h2>Labels</h2>
+          <div class="fx-grid">
+            <label class="fx-field">Show
+              <select name="labelContent"><option value="both">Value | % of total</option><option value="value">Value</option><option value="pct">% of total</option><option value="none">Nothing</option></select>
+            </label>
+            <label class="fx-field">Position
+              <select name="labelPos"><option value="auto">Automatic (end, or under long bars)</option><option value="end">End of the bar</option><option value="below">Under the bar</option><option value="inside">Inside the bar</option></select>
+            </label>
+            <label class="fx-field">Category names
+              <select name="labelAlign"><option value="left">Left aligned</option><option value="right">Right aligned</option></select>
+            </label>
+          </div>
+        </section>
+        <section>
+          <h2>Bar shape</h2>
+          <div class="fx-grid">
+            <label class="fx-field">Thickness
+              <select name="thickness"><option value="thin">Thin line</option><option value="normal">Normal</option><option value="thick">Thick</option></select>
+            </label>
+            <label class="fx-field">Corners
+              <select name="corners"><option value="square">Square</option><option value="slight">Slightly rounded</option><option value="rounded">Rounded</option><option value="pill">Fully round (pill)</option></select>
+            </label>
+            <label class="fx-field">Fill-up track
+              <select name="track"><option value="none">None</option><option value="full">Light track to the longest bar</option><option value="target">Up to the target (Target shelf)</option></select>
+            </label>
+          </div>
+        </section>
+        <section>
+          <h2>Colors</h2>
+          <div class="fx-grid">
+            <label class="fx-field">Color bars
+              <select name="colorMode"><option value="single">One color</option><option value="top">Highlight the top bar</option><option value="scale">Darker for higher values</option><option value="category">A color per bar</option></select>
+            </label>
+            <label class="fx-color">Bar color <input type="color" name="barColor" /></label>
+          </div>
+          <p class="fx-hint">With a Breakdown dimension, segments take a color per breakdown value.</p>
+        </section>
+      </div>
+
+      <div class="fx-tab" data-pane="look" hidden>
+        <section>
+          <h2>Title</h2>
+          <label class="fx-check"><input type="checkbox" name="showTitle" /> Show title</label>
+          <div class="fx-grid">
+            <label class="fx-field">Title <input type="text" name="title" placeholder="The dimension name" /></label>
+            <label class="fx-field">Align <select name="titleAlign"><option value="center">Center</option><option value="left">Left</option></select></label>
+          </div>
+        </section>
+        <section>
+          <h2>Text</h2>
+          <div class="fx-text">
+            <span class="h"></span><span class="h">Size</span><span class="h">Weight</span><span class="h">Color</span>
+            <span class="n">Title</span>
+            <select name="titleSize"><option>11</option><option>12</option><option>13</option><option>14</option><option>16</option><option>18</option><option>20</option></select>
+            <span></span><span></span>
+            <span class="n">Category names</span>
+            <select name="labelSize"><option>9</option><option>10</option><option>11</option><option>12</option><option>13</option><option>14</option><option>16</option></select>
+            <span></span>
+            <input type="color" name="labelColor" />
+            <span class="n">Values</span>
+            <select name="valueSize"><option>9</option><option>10</option><option>11</option><option>12</option><option>13</option><option>14</option><option>16</option></select>
+            <select name="valueWeight"><option value="400">Regular</option><option value="600">Semibold</option><option value="700">Bold</option></select>
+            <input type="color" name="valueColor" />
+          </div>
+        </section>
+        <section>
+          <h2>Background</h2>
+          <div class="fx-grid">
+            <label class="fx-field">Background
+              <select name="background"><option value="transparent">Transparent</option><option value="white">White</option><option value="custom">Custom color</option></select>
+            </label>
+            <label class="fx-color" id="bgColorField">Color <input type="color" name="bgColor" /></label>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="fx-foot">
+      <button type="button" id="reset" class="fx-btn ghost">Reset to defaults</button>
+      <span class="fx-spacer"></span>
+      <button type="button" id="cancel" class="fx-btn ghost">Cancel</button>
+      <button type="button" id="ok" class="fx-btn primary">OK</button>
+    </footer>
+  </form>
+</body>
+</html>

@@ -1,0 +1,36 @@
+{
+  "name": "Bar List",
+  "manifestName": "BarList",
+  "version": "1.0.0",
+  "description": "Ranked bars for a dimension: value and % of total, Top N + Others, several KPIs with switch buttons (incl. calculated ones), optional breakdown and target, thin to thick and square to round bars.",
+  "entry": "index.html",
+  "icon": "icon.png",
+  "formatDialog": true,
+  "previewPages": ["index.html", "format.html"],
+  "encodings": [
+    {
+      "id": "category", "name": "Category",
+      "roles": ["discrete-dimension"],
+      "maxCount": 1, "icon": "letter-a",
+      "tooltip": "The dimension: one bar per value (e.g. Salary Bucket)."
+    },
+    {
+      "id": "measures", "name": "Measures",
+      "dataType": "numeric", "roles": ["continuous-measure"],
+      "maxCount": 10, "icon": "metric",
+      "tooltip": "One or more KPIs (e.g. COUNT(Customers), SUM(Loan Amount)). With several, viewers switch between them with buttons. Calculated KPIs: Format Extension."
+    },
+    {
+      "id": "breakdown", "name": "Breakdown",
+      "roles": ["discrete-dimension"],
+      "maxCount": 1, "icon": "color",
+      "tooltip": "Optional. A second dimension that splits every bar into colored segments."
+    },
+    {
+      "id": "target", "name": "Target",
+      "dataType": "numeric", "roles": ["continuous-measure"],
+      "maxCount": 1, "icon": "metric",
+      "tooltip": "Optional. A target per bar: shown as a marker, and bars can fill up to it."
+    }
+  ]
+}

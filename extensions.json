@@ -1,5 +1,14 @@
 [
   {
+    "id": "bar-list",
+    "name": "Bar List",
+    "version": "1.0.0",
+    "description": "Ranked bars for a dimension: value and % of total, Top N + Others, several KPIs with switch buttons (incl. calculated ones), optional breakdown and target, thin to thick and square to round bars.",
+    "manifestName": "BarList",
+    "trex": "manifests/BarList.trex",
+    "preview": "extensions/bar-list/dev/preview.html"
+  },
+  {
     "id": "kpi-card",
     "name": "KPI Card",
     "version": "1.8.2",
