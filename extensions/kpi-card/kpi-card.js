@@ -139,7 +139,7 @@
     let changed = false; let waiting = false;
     // a slow answer (Tableau Server): show "Updating…" after a moment instead of looking frozen
     // (not for the reload Tableau sends after our own click: that would fade the bar you just highlighted)
-    if (lastData && Date.now() - selfSelectAt > 4000) updTimer = setTimeout(() => setUpdating(true), 450);
+    if (lastData) updTimer = setTimeout(() => { if (Date.now() - selfSelectAt > 4000) setUpdating(true); }, 450); // checked when it fires: the click may come a moment later
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const [data, enc] = await Promise.all([getRows(), getEncodings()]);

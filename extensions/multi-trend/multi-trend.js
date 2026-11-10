@@ -66,8 +66,11 @@
       return;
     }
     worksheet = tableau.extensions.worksheetContent.worksheet;
+    if (!model) document.body.classList.add('is-first-load');
     loadSettings();
     worksheet.addEventListener(tableau.TableauEventType.SummaryDataChanged, refresh);
+    try { worksheet.addEventListener(tableau.TableauEventType.FilterChanged, refresh); } catch (e) { /* not in this host */ }
+    watchParameters();
     try {
       tableau.extensions.settings.addEventListener(tableau.TableauEventType.SettingsChanged, () => { loadSettings(); hasAnimated = true; rebuild(); render(); });
     } catch (e) { /* not available */ }
@@ -83,33 +86,72 @@
     load();
   }
 
-  // Tableau allows ONE open data reader at a time and fires SummaryDataChanged in bursts
-  // (dashboard load, filters, parameters). A burst is merged into one load (EVENT_MERGE_MS);
-  // the chart is drawn as soon as a load finishes. Events that arrive during a load trigger
-  // one more load afterwards. A failed load is retried once; the last good chart stays on error.
   const EVENT_MERGE_MS = 40;
   let loading = false; let loadAgain = false; let eventTimer = 0;
   function refresh () { clearTimeout(eventTimer); eventTimer = setTimeout(load, EVENT_MERGE_MS); }
+  // Smooth updates when other sheets filter this one (dashboard actions, filters, parameters):
+  //  - Tableau can answer with no rows while it is still applying a filter: keep the cards and ask again
+  //    (shows "No data" only when it stays empty);
+  //  - the same data again (duplicate events, selections) does not redraw anything.
+  let lastSig = ''; let emptyTries = 0;
+  let selfSelectAt = 0; // time of our own selectTuplesAsync (a click on a bar)
+  const EMPTY_WAITS = [400, 800, 1500, 3000, 4500];
+  let updTimer = 0;
+  function setUpdating (on) {
+    clearTimeout(updTimer);
+    let badge = document.getElementById('updating');
+    if (on && !badge) { badge = document.createElement('div'); badge.id = 'updating'; badge.className = 'ext-updating'; badge.innerHTML = '<i></i>Updating…'; document.body.appendChild(badge); }
+    document.body.classList.toggle('is-updating', !!on);
+  }
   async function load () {
     if (loading) { loadAgain = true; return; }
     loading = true; loadAgain = false;
+    let changed = false; let waiting = false;
+    // a slow answer (Tableau Server): show "Updating…" after a moment instead of looking frozen
+    // (not for the reload Tableau sends after our own click: that would fade the point you just clicked)
+    if (lastData) updTimer = setTimeout(() => { if (Date.now() - selfSelectAt > 4000) setUpdating(true); }, 450); // checked when it fires: the click may come a moment later
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const [data, enc] = await Promise.all([getRows(), getEncodings()]);
-        lastData = data; lastEnc = enc;
-        model = buildModel(data, enc);
+        // Tableau Server can answer "no rows" for several seconds on a cold filter query: keep the chart
+        // (faded, "Updating…") and ask again with growing gaps, ~10 s in total, before showing "No data"
+        if (!data.rows.length && lastData && lastData.rows.length && emptyTries < EMPTY_WAITS.length) {
+          setUpdating(true); setTimeout(refresh, EMPTY_WAITS[emptyTries++]); waiting = true; break;
+        }
+        emptyTries = 0;
+        const sig = signature(data, enc);
+        if (sig !== lastSig || !model || model.error) { lastSig = sig; lastData = data; lastEnc = enc; model = buildModel(data, enc); changed = true; }
         break;
       } catch (e) {
         console.error(e);
-        if (loadAgain) break; // newer data is coming anyway
+        if (loadAgain) break;
         if (attempt === 0) { await new Promise((r) => setTimeout(r, 300)); continue; }
-        if (!lastData) model = { error: e.message || String(e) };
+        if (!lastData) { model = { error: e.message || String(e) }; changed = true; }
       }
     }
     loading = false;
-    render();
+    document.body.classList.remove('is-first-load');
+    if (!waiting) setUpdating(false);
+    if (changed) render();
     if (loadAgain) load();
   }
+  // quick fingerprint of the data (fields + every value) to skip redraws when nothing changed
+  function signature ({ rows, columns }, enc) {
+    let h = 2166136261;
+    const add = (str) => { for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } };
+    add(JSON.stringify(Object.keys(enc).map((k) => [k, (enc[k] || []).map((f) => f.name)])));
+    add(columns.map((c) => c.fieldName).join('|'));
+    for (const r of rows) for (const c of columns) { const dv = r[c.fieldName]; add(dv ? String(dv.value) + '\u0001' + (dv.formattedValue ?? '') : ''); }
+    return rows.length + ':' + (h >>> 0);
+  }
+  async function watchParameters () {
+    try {
+      const list = await worksheet.getParametersAsync();
+      list.forEach((p) => p.addEventListener(tableau.TableauEventType.ParameterChanged, () => { refresh(); setTimeout(refresh, 800); }));
+    } catch (e) { /* parameters not available */ }
+  }
+
+
   function rebuild () { if (lastData) { try { model = buildModel(lastData, lastEnc); } catch (e) { model = { error: e.message }; } } }
 
   async function getRows () {
@@ -511,7 +553,7 @@
         const [mx] = d3.pointer(ev, g.node());
         const ids = model.tuples.get(keys[nearest(mx)]) || [];
         const opt = ev.ctrlKey || ev.metaKey ? tableau.SelectOptions.Toggle : tableau.SelectOptions.Simple;
-        worksheet.selectTuplesAsync(ids, opt, { tooltipAnchorPoint: { x: ev.pageX, y: ev.pageY } }).catch(() => {});
+        selfSelectAt = Date.now(); worksheet.selectTuplesAsync(ids, opt, { tooltipAnchorPoint: { x: ev.pageX, y: ev.pageY } }).catch(() => {});
       });
   }
 

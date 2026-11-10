@@ -42,6 +42,7 @@ Smooth line trend with a KPI header, growth/degrowth coloring and smart tooltips
 Click a point to select it in Tableau (drives dashboard actions). Ctrl/Cmd-click adds to the selection.
 
 ## Version history
+- **1.10.1**: Dashboard loading like KPI Card: "Loading…" while the dashboard opens, a small "Updating…" badge when other sheets filter the chart slowly (not after your own click), no blank flash while Tableau Server applies a filter, no redraw when nothing changed; follows parameter and filter changes reliably.
 - **1.10.0**: Year-over-year charts (dates moved onto one year, e.g. a "Date for Axis" calc, with YEAR(date) on Series) are recognised: the headline shows the latest year's latest value (not the end of the axis), dates show without the dummy year, "Same period last year" compares with the previous year's line, and the tooltip shows the year-vs-year difference instead of a total. Grouped % measures are averaged, not added up.
 - **1.9.3**: With a dimension on Series, the KPI-shelf headline is now the total of all groups (it showed one group before), or the group picked in *Headline number shows*. Understands Tableau display units like "892 Mn": totals, MTD/YTD and axis ticks print as "11,074 Mn" instead of "11,074,000,000 Mn".
 - **1.9.2**: Faster updates on filter/parameter changes: a burst of Tableau events is merged into one data load and the chart draws as soon as it arrives (1.9.1 could load twice before drawing); no extra redraw after each update. Added stress-test scenarios bigdaily and biggroups.

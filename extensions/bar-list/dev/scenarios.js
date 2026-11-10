@@ -30,3 +30,10 @@ MockTableau.scenario('long', (M) => {
   const data = names.map((n, i) => { const c = Math.round(504300 / Math.pow(i + 1, 1.6)); return [M.dv(n, n, n), M.dv(c, c, M.fmtInt(c))]; });
   return { columns, data, encodings: [{ id: 'category', field: M.field(columns[0]) }, { id: 'measures', field: M.field(columns[1]) }] };
 });
+
+MockTableau.scenario('status', (M) => {
+  // loan application status (like the "Application's Current Status" panel)
+  const columns = ['Current Status', 'CNT(Applications)'];
+  const data = [['Rejected', 362762], ['Originating', 110300], ['Contract Agreed', 6000], ['Commodity Buy Agreed', 14000], ['Contract Signed', 9000], ['Commodity Ownership Transferred', 2000], ['Commodity Sell Agreed', 76900], ['Cancelled', 22000]].map(([n, c]) => [M.dv(n, n, n), M.dv(c, c, M.fmtInt(c))]);
+  return { columns, data, encodings: [{ id: 'category', field: M.field(columns[0]) }, { id: 'measures', field: M.field(columns[1]) }] };
+});

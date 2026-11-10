@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="ext-version" content="1.0.3" />
+  <meta name="ext-version" content="1.1.0" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Format Bar List</title>
-  <link rel="stylesheet" href="./format.css?v=1.0.3" />
-  <script src="../../shared/lib/tableau.extensions.1.latest.min.js?v=1.0.3"></script>
-  <script src="./kpi-formula.js?v=1.0.3"></script>
-  <script src="./format.js?v=1.0.3" defer></script>
+  <link rel="stylesheet" href="./format.css?v=1.1.0" />
+  <script src="../../shared/lib/tableau.extensions.1.latest.min.js?v=1.1.0"></script>
+  <script src="./kpi-formula.js?v=1.1.0"></script>
+  <script src="./format.js?v=1.1.0" defer></script>
 </head>
 <body>
   <form id="form" class="fx" autocomplete="off">
@@ -70,23 +70,31 @@
           <h2>Bar shape</h2>
           <div class="fx-grid">
             <label class="fx-field">Thickness
-              <select name="thickness"><option value="thin">Thin line</option><option value="normal">Normal</option><option value="thick">Thick</option></select>
+              <select name="thickness"><option value="thin">Thin line</option><option value="normal">Normal</option><option value="thick">Thick</option><option value="custom">Custom height…</option></select>
+            </label>
+            <label class="fx-field" id="barSizeField">Bar height (px)
+              <select name="barSize"><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>8</option><option>10</option><option>12</option><option>14</option><option>16</option><option>18</option><option>20</option><option>24</option><option>28</option><option>32</option><option>40</option></select>
             </label>
             <label class="fx-field">Corners
               <select name="corners"><option value="square">Square</option><option value="slight">Slightly rounded</option><option value="rounded">Rounded</option><option value="pill">Fully round (pill)</option></select>
             </label>
             <label class="fx-field">Fill-up track
-              <select name="track"><option value="none">None</option><option value="full">Light track to the longest bar</option><option value="target">Up to the target (Target shelf)</option></select>
+              <select name="track"><option value="none">None</option><option value="full">Light track to the longest bar</option><option value="total">Track = total of all bars</option><option value="target">Up to the target (Target shelf)</option></select>
             </label>
           </div>
+          <p class="fx-hint" id="trackHint"></p>
         </section>
         <section>
           <h2>Colors</h2>
           <div class="fx-grid">
             <label class="fx-field">Color bars
-              <select name="colorMode"><option value="single">One color</option><option value="top">Highlight the top bar</option><option value="scale">Darker for higher values</option><option value="category">A color per bar</option></select>
+              <select name="colorMode"><option value="single">One color</option><option value="top">Highlight the top bar</option><option value="scale">Darker for higher values</option><option value="category">A color per bar</option><option value="gradient">Gradient (two colors)</option></select>
             </label>
-            <label class="fx-color">Bar color <input type="color" name="barColor" /></label>
+            <label class="fx-color" id="barColorField">Bar color <input type="color" name="barColor" /></label>
+            <label class="fx-color" id="barColor2Field">Color 2 <input type="color" name="barColor2" /></label>
+            <label class="fx-field" id="gradientSpanField">Gradient runs
+              <select name="gradientSpan"><option value="width">Across the full width</option><option value="bar">Along each bar</option></select>
+            </label>
           </div>
           <p class="fx-hint">With a Breakdown dimension, segments take a color per breakdown value.</p>
         </section>

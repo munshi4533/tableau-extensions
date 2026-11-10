@@ -63,6 +63,7 @@ Click the download icon in the top-right corner:
 **Columns tab:** rename headers, choose alignment, hide columns.
 
 ## Version history
+- **1.4.1**: Dashboard loading like KPI Card: "Loading…" on open, "Updating…" badge while other sheets filter the table slowly, no empty flash while Tableau Server applies a filter; follows parameter and filter changes reliably.
 - **1.4.0**: right-click menu: Format Extension (when editing), sort/filter on headers, load all, clear filters, download CSV, copy.
 - **1.3.0**: *Text sizes* in Format → Table: column headers, dimensions (text cells) and values (number cells) separately; rows grow with the text.
 - **1.2.1**: visible grip in the middle of the header's bottom edge for dragging it taller.

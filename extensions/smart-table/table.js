@@ -90,9 +90,13 @@
     }
     worksheet = tableau.extensions.worksheetContent.worksheet;
     loadSettings();
+    document.body.classList.add('is-first-load');
 
     // Filters and actions from other sheets change our summary data -> reload
-    worksheet.addEventListener(tableau.TableauEventType.SummaryDataChanged, debounce(() => load(false), 150));
+    const reload = debounce(() => load(false), 150);
+    worksheet.addEventListener(tableau.TableauEventType.SummaryDataChanged, reload);
+    try { worksheet.addEventListener(tableau.TableauEventType.FilterChanged, reload); } catch (e) { /* not in this host */ }
+    try { (await worksheet.getParametersAsync()).forEach((p) => p.addEventListener(tableau.TableauEventType.ParameterChanged, () => { reload(); setTimeout(reload, 800); })); } catch (e) { /* no parameters */ }
     try {
       tableau.extensions.settings.addEventListener(tableau.TableauEventType.SettingsChanged, onSettingsChanged);
     } catch (e) { /* not available */ }
@@ -155,11 +159,26 @@
 
   // Loads only the first rows (cfg.initialRows) unless all === true. Reading fewer rows from Tableau
   // is what makes big sheets open fast; "Load all" fetches the rest.
+  // Loading on dashboards (same as the other extensions):
+  //  - first load: "Loading…" placeholder; later slow reloads (other sheets filtering this one): the table
+  //    stays, faded, with a small "Updating…" badge — but not for the reload after our own click;
+  //  - Tableau Server can answer "no rows" for a few seconds on a cold filter query: keep the table and ask
+  //    again with growing gaps before showing it empty.
+  let emptyTries = 0; let selfSelectAt = 0; let updTimer = 0;
+  const EMPTY_WAITS = [400, 800, 1500, 3000, 4500];
+  function setUpdating (on) {
+    clearTimeout(updTimer);
+    let badge = document.getElementById('updating');
+    if (on && !badge) { badge = document.createElement('div'); badge.id = 'updating'; badge.className = 'ext-updating'; badge.innerHTML = '<i></i>Updating…'; document.body.appendChild(badge); }
+    document.body.classList.toggle('is-updating', !!on);
+  }
   async function load (all) {
     all = all === true;
     const limit = all || cfg.initialRows === 'all' ? Infinity : (+cfg.initialRows || 500);
     const token = ++loadingToken;
     const t0 = performance.now();
+    if (N > 0 && !all) updTimer = setTimeout(() => { if (Date.now() - selfSelectAt > 4000) setUpdating(true); }, 450); // checked when it fires: the click may come a moment later
+    let waiting = false;
     try {
       const enc = await getEncodings();
       const fields = enc.fields || [];
@@ -168,6 +187,12 @@
       if (all) status('Loading all rows…');
       const reader = await worksheet.getSummaryDataReaderAsync(Math.min(limit, PAGE_ROWS), { ignoreSelection: true });
       const total = reader.totalRowCount || 0;
+      if (!total && N > 0 && emptyTries < EMPTY_WAITS.length) { // keep the table while Tableau finishes the filter
+        await reader.releaseAsync().catch(() => {});
+        waiting = true; setUpdating(true); setTimeout(() => load(false), EMPTY_WAITS[emptyTries++]);
+        return;
+      }
+      emptyTries = 0;
       const tRead = performance.now();
       let built = null;
       let offset = 0;
@@ -194,6 +219,8 @@
     } catch (e) {
       console.error(e);
       status(`<b>Something went wrong.</b><br>${esc(e.message || e)}`);
+    } finally {
+      if (token === loadingToken) { document.body.classList.remove('is-first-load'); if (!waiting) setUpdating(false); }
     }
   }
 
@@ -695,6 +722,7 @@
     if (!cfg.selectToTableau) return;
     const ids = [...selected].map((r) => tupleIds[r]);
     const anchor = e ? { tooltipAnchorPoint: { x: e.pageX, y: e.pageY } } : undefined;
+    selfSelectAt = Date.now();
     worksheet.selectTuplesAsync(ids, tableau.SelectOptions.Simple, anchor).catch((err) => console.warn('selectTuplesAsync', err));
   }
 

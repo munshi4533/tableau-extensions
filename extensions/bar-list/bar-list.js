@@ -22,11 +22,14 @@
     nullLast: true, // Null / Not Available at the bottom, in grey
     labelContent: 'both', // both (value | %) | value | pct | none
     labelPos: 'auto', // auto (right of the bar, under it when it does not fit) | end | below | inside
-    thickness: 'thin', // thin | normal | thick
+    thickness: 'thin', // thin | normal | thick | custom
+    barSize: 10, // bar height in px when thickness = custom
     corners: 'pill', // square | slight | rounded | pill
-    track: 'none', // none | full (light bar to the longest) | target
-    colorMode: 'single', // single | top | scale | category
+    track: 'none', // none | full (light bar to the longest) | total (track = total of all bars, bars = their share) | target
+    colorMode: 'single', // single | top | scale | category | gradient
     barColor: '#2a78d6',
+    barColor2: '#1baf7a', // second color of the gradient
+    gradientSpan: 'width', // width (the color shows how far a bar reaches) | bar (each bar runs color 1 → color 2)
     labelAlign: 'left', // category labels: left | right
     labelSize: 11, valueSize: 11, titleSize: 14,
     labelColor: '#0b0b0b', valueColor: '#0b0b0b',
@@ -81,7 +84,7 @@
     let changed = false; let waiting = false;
     // a slow answer (Tableau Server): show "Updating…" after a moment instead of looking frozen
     // (not for the reload Tableau sends after our own click: that would fade the bar you just highlighted)
-    if (lastData && Date.now() - selfSelectAt > 4000) updTimer = setTimeout(() => setUpdating(true), 450);
+    if (lastData) updTimer = setTimeout(() => { if (Date.now() - selfSelectAt > 4000) setUpdating(true); }, 450); // checked when it fires: the click may come a moment later
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const [data, enc] = await Promise.all([getRows(), getEncodings()]);
@@ -297,7 +300,10 @@
     };
 
     // scale: bars relative to the longest bar (or its target), so the biggest fills the row
-    const maxV = d3.max(list, (r) => Math.max(r.v || 0, cfg.track === 'target' ? (r.target || 0) : 0)) || 1;
+    // "total" track: the track is the total of all bars and every bar fills its share (only for counts / sums)
+    const useTotal = cfg.track === 'total' && share && total > 0;
+    const trackMode = cfg.track === 'total' && !useTotal ? 'full' : cfg.track;
+    const maxV = useTotal ? total : (d3.max(list, (r) => Math.max(r.v || 0, trackMode === 'target' ? (r.target || 0) : 0)) || 1);
     const W = box.clientWidth; const H = box.clientHeight;
     const font = (size, w) => `${w} ${size}px -apple-system, "Segoe UI", Roboto, Arial, sans-serif`;
     const tw = (t, f) => { ctx.font = f; return ctx.measureText(t).width; };
@@ -306,13 +312,14 @@
     const areaW = Math.max(40, W - labW - 8);
     const valW = d3.max(list, (r) => tw(label(r), valF)) + 8;
     // row height shares the zone; bar thickness follows the chosen style
-    const rowH = Math.max(18, Math.min(64, H / list.length));
-    const th = Math.max(2, Math.round({ thin: 5, normal: rowH * 0.42, thick: rowH * 0.66 }[cfg.thickness] || 5));
+    let rowH = Math.max(18, Math.min(64, H / list.length));
+    if (cfg.thickness === 'custom') rowH = Math.max(rowH, Math.min(80, +cfg.barSize || 10) + 8);
+    const th = cfg.thickness === 'custom' ? Math.max(2, Math.min(80, +cfg.barSize || 10)) : Math.max(2, Math.round({ thin: 5, normal: rowH * 0.42, thick: rowH * 0.66 }[cfg.thickness] || 5));
     const radius = { square: 0, slight: Math.min(3, th / 4), rounded: th * 0.3, pill: th / 2 }[cfg.corners] ?? th / 2;
     const pos = cfg.labelPos;
     const fullFor = pos === 'below' || pos === 'inside' ? areaW : areaW - valW; // bar room
     // with a track (or a target), labels need their own room at the right; without, long bars may put the label underneath
-    const scaleW = pos === 'auto' && cfg.track === 'none' ? areaW : (pos === 'auto' ? areaW - valW : fullFor);
+    const scaleW = pos === 'auto' && trackMode === 'none' ? areaW : (pos === 'auto' ? areaW - valW : fullFor);
     const reserveBelow = pos === 'below' || pos === 'auto';
     const canBelow = rowH >= th + (+cfg.valueSize || 11) + 6;
 
@@ -328,15 +335,18 @@
       // auto: right of the bar when it fits, otherwise under the bar's end (like a long "Not Available" bar)
       let where = pos;
       if (pos === 'auto') { where = w + valW <= areaW ? 'end' : (canBelow ? 'below' : 'end'); if (where === 'end' && w + valW > areaW) w = areaW - valW; }
-      const trackW = cfg.track === 'full' ? scaleW : cfg.track === 'target' && r.target ? (r.target / maxV) * scaleW : 0;
-      let bar = `<div class="bl-bar" style="width:${w}px;height:${th}px;border-radius:${radius}px;background:${model.hasBreakdown ? 'transparent' : color}">`;
+      const trackW = trackMode === 'full' || trackMode === 'total' ? scaleW : trackMode === 'target' && r.target ? (r.target / maxV) * scaleW : 0;
+      // two-color gradient: across the full width (a bar's end color shows how far it reaches) or along each bar
+      const grad = cfg.colorMode === 'gradient' && !(r.isNull && cfg.nullLast) && !r.others;
+      const fill = model.hasBreakdown ? 'transparent' : grad ? `linear-gradient(90deg, ${cfg.barColor || PALETTE[0]}, ${cfg.barColor2 || '#1baf7a'})${cfg.gradientSpan === 'bar' ? '' : ` 0 0 / ${scaleW}px 100% no-repeat`}` : color;
+      let bar = `<div class="bl-bar" style="width:${w}px;height:${th}px;border-radius:${radius}px;background:${fill}">`;
       if (model.hasBreakdown && r.v) {
         bar += model.segNames.map((s, si) => { const sv = kpiValue(k, (r.segs.get(s) || {})); return sv > 0 ? `<i style="width:${(sv / r.v) * 100}%;background:${PALETTE[si % PALETTE.length]}" data-seg="${esc(s)}"></i>` : ''; }).join('');
       }
       bar += '</div>';
       // labels start after the bar, its target or the full track, whichever ends later
-      const reach = cfg.track === 'full' && (where === 'end' || pos === 'auto') ? scaleW : Math.max(w, r.target ? (r.target / maxV) * scaleW + 2 : 0);
-      if (cfg.track !== 'none' && where === 'below') where = 'end';
+      const reach = (trackMode === 'full' || trackMode === 'total') && (where === 'end' || pos === 'auto') ? scaleW : Math.max(w, r.target ? (r.target / maxV) * scaleW + 2 : 0);
+      if (trackMode !== 'none' && where === 'below') where = 'end';
       const tick = r.target ? `<b class="bl-target" style="left:${(r.target / maxV) * scaleW}px;height:${th + 6}px"></b>` : '';
       const txt = label(r);
       const lab = txt ? `<span class="bl-val ${where}" style="${where === 'end' ? `left:${reach + 6}px` : where === 'below' ? `left:${Math.max(0, w - tw(txt, valF))}px;top:calc(50% + ${th / 2 + 2}px)` : 'left:6px'}">${esc(txt)}</span>` : '';
@@ -358,6 +368,7 @@
     if (cfg.colorMode === 'category') return PALETTE[i % PALETTE.length];
     if (cfg.colorMode === 'top') { const top = list.filter((x) => !x.isNull && !x.others).reduce((a, b) => ((b.v ?? -Infinity) > (a.v ?? -Infinity) ? b : a), list[0]); return r === top ? base : mix(base, '#ffffff', 0.55); }
     if (cfg.colorMode === 'scale') return mix(base, '#ffffff', 0.7 * (1 - Math.max(0, r.v || 0) / maxV));
+    if (cfg.colorMode === 'gradient') return base;
     return base;
   }
   function mix (a, b, t) { const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)); const x = p(a); const y = p(b); return '#' + x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, '0')).join(''); }

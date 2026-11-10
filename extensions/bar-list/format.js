@@ -12,7 +12,7 @@
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const opts = (list, v) => list.map(([k, t]) => `<option value="${esc(k)}" ${String(k) === String(v) ? 'selected' : ''}>${esc(t)}</option>`).join('');
-  const NUM = new Set(['topN', 'labelSize', 'valueSize', 'titleSize']);
+  const NUM = new Set(['topN', 'labelSize', 'valueSize', 'titleSize', 'barSize']);
 
   const verMeta = document.querySelector('meta[name="ext-version"]');
   if (verMeta) { const h = document.querySelector('.fx-top p'); if (h) h.textContent += ` · v${verMeta.content}`; }
@@ -64,7 +64,17 @@
       if (el.type === 'checkbox') el.checked = !!cfg[el.name]; else el.value = cfg[el.name];
     }
   }
-  function refresh () { $('bgColorField').hidden = cfg.background !== 'custom'; }
+  function refresh () {
+    $('bgColorField').hidden = cfg.background !== 'custom';
+    $('barSizeField').hidden = cfg.thickness !== 'custom';
+    $('barColorField').hidden = cfg.colorMode === 'category';
+    $('barColor2Field').hidden = $('gradientSpanField').hidden = cfg.colorMode !== 'gradient';
+    $('trackHint').textContent = {
+      full: 'The longest bar fills the track; the others are compared with it.',
+      total: 'The track is the total of all bars (e.g. all applications) and each bar fills its share. For averages and ratios it falls back to the longest bar.',
+      target: 'Each bar fills up to its own target from the Target shelf.'
+    }[cfg.track] || '';
+  }
 
   function findMeasure (name) {
     const n = String(name).toLowerCase().trim();

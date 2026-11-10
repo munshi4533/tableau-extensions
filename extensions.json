@@ -2,7 +2,7 @@
   {
     "id": "bar-list",
     "name": "Bar List",
-    "version": "1.0.3",
+    "version": "1.1.0",
     "description": "Ranked bars for a dimension: value and % of total, Top N + Others, several KPIs with switch buttons (incl. calculated ones), optional breakdown and target, thin to thick and square to round bars.",
     "manifestName": "BarList",
     "trex": "manifests/BarList.trex",
@@ -11,7 +11,7 @@
   {
     "id": "kpi-card",
     "name": "KPI Card",
-    "version": "1.8.4",
+    "version": "1.8.5",
     "description": "A row of KPI cards from a plain date and your measures: MTD, last month or last day as the big number, worked out in the extension. Calculated KPIs (e.g. Average Loan Size = Loan Amount / Loans) are rolled up correctly for each period. Comparison, secondary values, target progress, and a chart per card: mini trend, daily bars + running total, bars, line or running total.",
     "manifestName": "KpiCard",
     "trex": "manifests/KpiCard.trex",
@@ -20,7 +20,7 @@
   {
     "id": "multi-trend",
     "name": "Multi Measure Trend",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "description": "Several measures over time on one chart. Each measure can be a solid, dashed or dotted line, an area or bars, with its own color and axis, plus a tooltip comparing them.",
     "manifestName": "MultiTrend",
     "trex": "manifests/MultiTrend.trex",
@@ -29,7 +29,7 @@
   {
     "id": "smart-table",
     "name": "Smart Table",
-    "version": "1.4.0",
+    "version": "1.4.1",
     "description": "Fast flat table for large data (virtual scrolling): sort and filter any column, search, conditional colors, totals, and row selection that drives dashboard actions.",
     "manifestName": "SmartTable",
     "trex": "manifests/SmartTable.trex",
@@ -38,7 +38,7 @@
   {
     "id": "smooth-trend",
     "name": "Smooth Trend",
-    "version": "1.10.0",
+    "version": "1.10.1",
     "description": "Smooth line trend with a KPI header (latest, MTD, QTD, YTD or your own calculation), growth/degrowth coloring and smart tooltips.",
     "manifestName": "SmoothTrend",
     "trex": "manifests/SmoothTrend.trex",
