@@ -1,7 +1,7 @@
 {
   "name": "Bar List",
   "manifestName": "BarList",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Ranked bars for a dimension: value and % of total, Top N + Others, several KPIs with switch buttons (incl. calculated ones), optional breakdown and target, thin to thick and square to round bars.",
   "entry": "index.html",
   "icon": "icon.png",
@@ -11,7 +11,7 @@
     {
       "id": "category", "name": "Category",
       "roles": ["discrete-dimension"],
-      "maxCount": 1, "icon": "letter-a",
+      "maxCount": 1, "icon": "letter-y",
       "tooltip": "The dimension: one bar per value (e.g. Salary Bucket)."
     },
     {
@@ -29,7 +29,7 @@
     {
       "id": "target", "name": "Target",
       "dataType": "numeric", "roles": ["continuous-measure"],
-      "maxCount": 1, "icon": "metric",
+      "maxCount": 1,
       "tooltip": "Optional. A target per bar: shown as a marker, and bars can fill up to it."
     }
   ]

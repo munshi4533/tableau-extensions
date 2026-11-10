@@ -60,6 +60,11 @@ def validate(m):
     ids = [e['id'] for e in encs]
     if len(ids) != len(set(ids)):
         sys.exit(f'{where}: encoding ids must be unique')
+    # Tableau refuses a manifest where two encodings share an icon ("Cannot use the same icon for more than one encoding")
+    icons = [e['icon'] for e in encs if e.get('icon')]
+    dup = sorted({i for i in icons if icons.count(i) > 1})
+    if dup:
+        sys.exit(f'{where}: icon {", ".join(dup)} is used by more than one encoding; Tableau allows each icon once (or leave "icon" out)')
     for e in encs:
         if e['id'].lower() in RESERVED_IDS:
             sys.exit(f'{where}: encoding id "{e["id"]}" is reserved by Tableau')
