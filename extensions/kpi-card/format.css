@@ -124,3 +124,9 @@ section h2 { margin-bottom: 4px; }
 .chips.sp { gap: 2px 14px; margin-top: 4px; }
 .chips.sp .fx-check { margin: 3px 0; font-weight: 400; }
 section[hidden] { display: none; }
+
+.fx-text { display: grid; grid-template-columns: 90px 1fr 1fr 44px; gap: 6px 10px; align-items: center; margin-top: 6px; }
+.fx-text .h { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); }
+.fx-text .n { color: var(--ink-2); font-weight: 500; }
+.fx-text select { width: 100%; font: inherit; padding: 5px 7px; border: 1px solid var(--field); border-radius: 6px; background: white; }
+.fx-text input[type=color] { width: 40px; height: 28px; padding: 0; border: 1px solid var(--field); border-radius: 6px; background: none; cursor: pointer; }

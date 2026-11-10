@@ -172,6 +172,7 @@
             <label class="fx-color">Line <input type="color" data-f="lineColor" value="${esc(c.lineColor || '#eda100')}"></label>
           </div>
           <div class="row">
+            <label class="fx-field">Icon<select data-f="icon">${opts([['auto', 'Automatic'], ['always', 'Always'], ['hide', 'Hide']], c.icon || 'auto')}</select></label>
             <label class="fx-field">Icon color by<select data-f="statusRule">${opts([['change', 'Change vs comparison'], ['value', 'Value thresholds'], ['target', '% of target']], c.statusRule)}</select></label>
             ${c.statusRule === 'value' ? `<label class="fx-field">Green ${c.better === 'down' ? 'up to' : 'from'}<input type="text" data-f="statusGood" value="${esc(c.statusGood)}" placeholder="e.g. 1,000 · 250K · 65%"></label>
             <label class="fx-field">Yellow ${c.better === 'down' ? 'up to' : 'from'} <small>(optional)</small><input type="text" data-f="statusWarn" value="${esc(c.statusWarn)}" placeholder="empty = green / red only"></label>` : ''}

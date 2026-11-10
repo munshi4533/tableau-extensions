@@ -28,6 +28,10 @@
     statusIcon: true, // round trend icon left of the big number, colored green / yellow / red
     iconStyle: 'soft', // soft (tinted circle) | solid (filled circle)
     colorNumber: false, // also color the big number
+    // text style: weight 400 regular | 600 semibold | 700 bold; colors
+    valueWeight: '700', valueColor: '#0b0b0b',
+    labelWeight: '600', labelColor: '#52514e',
+    detailWeight: '400', detailColor: '#898781',
     compare: 'auto', // auto (previous day / LMTD / previous month) | yoy | none
     title: '',
     columns: 'auto', // auto | 1..6
@@ -56,6 +60,7 @@
     targetType: 'none', targetValue: '', targetKey: '', targetFormula: '',
     chartType: '', barColor: '', lineColor: '', // '' = as set for all cards
     statusRule: 'change', // what decides green / yellow / red: change | value | target
+    icon: 'auto', // auto (hidden when there is nothing to show, e.g. Total) | always | hide
     statusGood: '', statusWarn: '', statusBand: '' // thresholds (see statusOf)
   };
   const LINE_DEFAULT = '#eda100';
@@ -474,7 +479,10 @@
       delta = `<div class="kc-delta ${dinfo.tone}"><b>${dinfo.arrow} ${esc(dinfo.text)}</b> <span>${esc(cmp.caption)}</span></div>`;
     }
     const st = statusOf(c, v, dinfo, targetOf(card, c, p, range, v, true), unit);
-    const icon = cfg.statusIcon && v !== null ? statusIcon(st, dinfo ? dinfo.dir : null) : '';
+    // auto: no icon when there is neither a direction nor a status (e.g. Total has no comparison)
+    const iconMode = c.icon || 'auto';
+    const showIcon = cfg.statusIcon && v !== null && iconMode !== 'hide' && (iconMode === 'always' || dinfo || st !== 'neutral');
+    const icon = showIcon ? statusIcon(st, dinfo ? dinfo.dir : null) : '';
     const others = cfg.secondary ? offeredPeriods().filter((q) => q !== p) : [];
     const sec = others.length ? `<div class="kc-sec">${others.map((q) => `<span>${esc(periodLabel(q))} <b>${esc(fmt(valueOf(card, c, rangeOf(q))))}</b></span>`).join('')}</div>` : '';
     let prog = '';
@@ -772,6 +780,9 @@
     r.setProperty('--card-bg', bg === 'transparent' ? '#ffffff' : bg);
     r.setProperty('--label-size', (+cfg.labelSize || 12) + 'px');
     r.setProperty('--detail-size', (+cfg.detailSize || 11) + 'px');
+    r.setProperty('--value-weight', cfg.valueWeight || '700'); r.setProperty('--value-color', cfg.valueColor || '#0b0b0b');
+    r.setProperty('--label-weight', cfg.labelWeight || '600'); r.setProperty('--label-color', cfg.labelColor || '#52514e');
+    r.setProperty('--detail-weight', cfg.detailWeight || '400'); r.setProperty('--detail-color', cfg.detailColor || '#898781');
     r.setProperty('--spark-max', { large: '120px', medium: '64px', small: '36px' }[cfg.sparkSize] || 'none');
   }
   function showTooltip (html, ev) {

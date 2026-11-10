@@ -4,13 +4,13 @@
   <base href="../" />
   <!-- GENERATED preview (tools/build.py): sample data instead of Tableau -->
   <meta charset="utf-8" />
-  <meta name="ext-version" content="1.5.0" />
+  <meta name="ext-version" content="1.6.0" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Format KPI Card (preview)</title>
-  <link rel="stylesheet" href="./format.css?v=1.5.0" />
+  <link rel="stylesheet" href="./format.css?v=1.6.0" />
   <script>window.tableau = window.parent.__mockDialogTableau;</script>
-  <script src="./kpi-formula.js?v=1.5.0"></script>
-  <script src="./format.js?v=1.5.0" defer></script>
+  <script src="./kpi-formula.js?v=1.6.0"></script>
+  <script src="./format.js?v=1.6.0" defer></script>
 </head>
 <body>
   <form id="form" class="fx" autocomplete="off">
@@ -68,7 +68,7 @@
             </label>
           </div>
           <label class="fx-check"><input type="checkbox" name="colorNumber" /> Color the big number too</label>
-          <p class="fx-hint">Green / yellow / red is set per card (Cards → Number format, target, chart &amp; icon color): by change, by value thresholds or by % of target. Leave yellow empty for green / red only.</p>
+          <p class="fx-hint">Green / yellow / red is set per card (Cards → Number format, target, chart &amp; icon color): by change, by value thresholds or by % of target. Leave yellow empty for green / red only. The icon hides itself when there is nothing to compare (e.g. Total); each card can also set Icon to Always or Hide.</p>
         </section>
         <section>
           <h2>Under the number</h2>
@@ -158,12 +158,23 @@
           </div>
         </section>
         <section>
-          <h2>Text sizes</h2>
-          <div class="fx-grid">
-            <label class="fx-field">Big number<select name="valueSize"><option value="0">Fit to card</option><option>20</option><option>24</option><option>28</option><option>32</option><option>36</option><option>40</option><option>48</option></select></label>
-            <label class="fx-field">Card name<select name="labelSize"><option>10</option><option>11</option><option>12</option><option>13</option><option>14</option><option>16</option></select></label>
-            <label class="fx-field">Details<select name="detailSize"><option>9</option><option>10</option><option>11</option><option>12</option><option>13</option></select></label>
+          <h2>Text</h2>
+          <div class="fx-text">
+            <span class="h"></span><span class="h">Size</span><span class="h">Weight</span><span class="h">Color</span>
+            <span class="n">Big number</span>
+            <select name="valueSize"><option value="0">Fit to card</option><option>20</option><option>24</option><option>28</option><option>32</option><option>36</option><option>40</option><option>48</option><option>56</option><option>64</option></select>
+            <select name="valueWeight"><option value="400">Regular</option><option value="600">Semibold</option><option value="700">Bold</option><option value="800">Extra bold</option></select>
+            <input type="color" name="valueColor" />
+            <span class="n">Card name</span>
+            <select name="labelSize"><option>10</option><option>11</option><option>12</option><option>13</option><option>14</option><option>16</option><option>18</option><option>20</option></select>
+            <select name="labelWeight"><option value="400">Regular</option><option value="600">Semibold</option><option value="700">Bold</option><option value="800">Extra bold</option></select>
+            <input type="color" name="labelColor" />
+            <span class="n">Details</span>
+            <select name="detailSize"><option>9</option><option>10</option><option>11</option><option>12</option><option>13</option><option>14</option></select>
+            <select name="detailWeight"><option value="400">Regular</option><option value="600">Semibold</option><option value="700">Bold</option><option value="800">Extra bold</option></select>
+            <input type="color" name="detailColor" />
           </div>
+          <p class="fx-hint">Details = dates, comparison text and the small values. "Color the big number" (Big number tab) overrides its color with green / yellow / red.</p>
         </section>
         <section>
           <h2>Background</h2>

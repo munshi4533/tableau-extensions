@@ -40,19 +40,19 @@ html, body {
 .kc-card.center .kc-label { align-items: center; }
 
 .kc-label { display: flex; flex-direction: column; min-width: 0; }
-.kc-name { font-size: var(--label-size); font-weight: 600; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-.kc-range { font-size: calc(var(--detail-size) - 1px); color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-.kc-value { font-size: 32px; line-height: 1.08; font-weight: 700; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; white-space: nowrap; margin-top: 2px; }
+.kc-name { font-size: var(--label-size); font-weight: var(--label-weight, 600); color: var(--label-color, var(--ink-2)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.kc-range { font-size: calc(var(--detail-size) - 1px); color: var(--detail-color, var(--ink-3)); font-weight: var(--detail-weight, 400); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.kc-value { font-size: 32px; line-height: 1.08; font-weight: var(--value-weight, 700); color: var(--value-color, var(--ink-1)); letter-spacing: -0.01em; font-variant-numeric: tabular-nums; white-space: nowrap; margin-top: 2px; }
 .kc-delta { font-size: var(--detail-size); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .kc-delta b { font-weight: 600; font-variant-numeric: tabular-nums; }
-.kc-delta span { color: var(--ink-3); }
+.kc-delta span { color: var(--detail-color, var(--ink-3)); font-weight: var(--detail-weight, 400); }
 .kc-delta.good b { color: var(--good-text); }
 .kc-delta.bad b { color: var(--bad-text); }
 .kc-delta.flat b { color: var(--ink-3); }
-.kc-sec { display: flex; flex-wrap: wrap; gap: 0 12px; font-size: var(--detail-size); color: var(--ink-3); max-width: 100%; }
+.kc-sec { display: flex; flex-wrap: wrap; gap: 0 12px; font-size: var(--detail-size); color: var(--detail-color, var(--ink-3)); font-weight: var(--detail-weight, 400); max-width: 100%; }
 .kc-card.center .kc-sec { justify-content: center; }
 .kc-sec span { white-space: nowrap; }
-.kc-sec b { color: var(--ink-2); font-weight: 600; font-variant-numeric: tabular-nums; }
+.kc-sec b { color: var(--label-color, var(--ink-2)); font-weight: 600; font-variant-numeric: tabular-nums; }
 
 .kc-prog { display: flex; align-items: center; gap: 8px; font-size: var(--detail-size); color: var(--ink-3); width: 100%; margin-top: 2px; }
 .kc-prog span { white-space: nowrap; font-variant-numeric: tabular-nums; }

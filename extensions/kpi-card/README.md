@@ -37,6 +37,7 @@ A row of KPI cards from a **plain date** and **your measures**. The extension wo
 - If the date is at **MONTH** level, the periods become *This month* and *Last month*.
 
 ## Version history
+- **1.6.0**: The status icon hides itself when there is nothing to compare (e.g. Total); per card Icon = Automatic / Always / Hide. Look → Text: size, weight (Regular / Semibold / Bold / Extra bold) and color for the big number, card name and details.
 - **1.5.0**: *Status icon*, a round trend icon left of the big number. The arrow shows direction, the color shows status: by change (with an optional flat band for yellow), by value thresholds, or by % of target (against pace for MTD/YTD). Leave yellow empty for green / red only. Soft or solid icon; optionally color the big number.
 - **1.4.0**: Line style Extra smooth (default), Smooth or Straight, for every line and the mini trend. Rounded bars (top and bottom) on by default. Both in Format → Chart.
 - **1.3.0**: *Chart* tab. Each card can show a mini trend line, **bars per date + running total** (two scales, like a funnel dashboard), bars, a line or a running total, with date labels, a legend and per-card bar and line colors. The running total can add up over all dates or restart each month or year. Ratios run "to date" (e.g. approved so far ÷ submitted so far). New period **Total (all dates)**. *Periods to offer* chooses which buttons and small values appear.
