@@ -329,6 +329,21 @@
     for (; lo < hi; lo++) { const v = m.byDay.get(days[lo]); s += v; if (v > mx) mx = v; if (v < mn) mn = v; }
     return how === 'avg' ? s / n : how === 'max' ? mx : how === 'min' ? mn : s;
   }
+  function rollupRanges (m, ranges, how) {
+    if (ranges.length === 1) return rollup(m, ranges[0], how);
+    const days = m.sortedDays.filter((t) => ranges.some(([a, b]) => t >= a && t <= b));
+    if (!days.length) return null;
+    if (how === 'last') return m.byDay.get(days[days.length - 1]);
+    const vals = days.map((t) => m.byDay.get(t));
+    return how === 'avg' ? d3.mean(vals) : how === 'max' ? d3.max(vals) : how === 'min' ? d3.min(vals) : d3.sum(vals);
+  }
+  function valueRanges (card, c, ranges) {
+    if (ranges.length === 1) return valueOf(card, c, ranges[0]);
+    if (card.kind === 'measure') return rollupRanges(card.m, ranges, c.rollup);
+    if (formulaProblem(c.formula)) return null;
+    const days = model.dates.filter((t) => ranges.some(([a, b]) => t >= a && t <= b)).length;
+    return compiled(c.formula).run((name) => { const m = findMeasure(name); return m ? rollupRanges(m, ranges, mcfgOf(m).rollup) : null; }, { days });
+  }
   function daysWithData (range) { return model.dates.filter((t) => t >= range[0] && t <= range[1]).length; }
   function evalFormula (formula, range) {
     if (formulaProblem(formula)) return null;
@@ -498,10 +513,13 @@
       return { el };
     }
 
-    const v = valueOf(card, c, range);
-    const cmp = compareOf(p, range);
+    // a clicked bar / point: the big number shows the selection (Tableau doesn't filter the sheet by its own selection)
+    const selR = sel ? sel.ranges : null;
+    const v = selR ? valueRanges(card, c, selR) : valueOf(card, c, range);
+    const cmp = selR ? null : compareOf(p, range);
     const b = cmp ? valueOf(card, c, cmp.range) : null;
-    const tgt = targetOf(card, c, p, range, v);
+    const tgt = selR ? null : targetOf(card, c, p, range, v);
+    const rangeText = selR ? `Selected · ${[...selR].sort((x, y) => x[0] - y[0]).map((r) => fmtRange(r)).join(', ')}` : `${periodLabel(p)} · ${fmtRange(range)}`;
     const fmt = (x) => fmtCard(x, c, unit);
 
     let delta = '';
@@ -510,7 +528,7 @@
       dinfo = change(v, b, c, unit);
       delta = `<div class="kc-delta ${dinfo.tone}"><b>${dinfo.arrow} ${esc(dinfo.text)}</b> <span>${esc(cmp.caption)}</span></div>`;
     }
-    const st = statusOf(c, v, dinfo, targetOf(card, c, p, range, v, true), unit);
+    const st = statusOf(c, v, dinfo, selR ? null : targetOf(card, c, p, range, v, true), unit);
     // auto: no icon when there is neither a direction nor a status (e.g. Total has no comparison)
     const iconMode = c.icon || 'auto';
     const showIcon = cfg.statusIcon && v !== null && iconMode !== 'hide' && (iconMode === 'always' || dinfo || st !== 'neutral');
@@ -529,16 +547,16 @@
     const legend = cfg.chartLegend && ct === 'combo'
       ? `<div class="kc-legend"><span><i style="background:${cols.line}"></i>${esc(runName())}</span><span><i style="background:${cols.bar}"></i>${esc(dayName())}</span></div>` : '';
     el.innerHTML =
-      `<div class="kc-head"><div class="kc-label"><span class="kc-name">${esc(name)}</span>${cfg.showRange ? `<span class="kc-range">${esc(periodLabel(p))} · ${esc(fmtRange(range))}</span>` : ''}</div>${legend}</div>` +
+      `<div class="kc-head"><div class="kc-label"><span class="kc-name">${esc(name)}</span>${cfg.showRange || selR ? `<span class="kc-range${selR ? ' sel' : ''}">${esc(rangeText)}</span>` : ''}</div>${legend}</div>` +
       `<div class="kc-value${cfg.colorNumber && st !== 'neutral' ? ' s-' + st : ''}">${icon}<span>${esc(fmt(v))}</span></div>${delta}${sec}${prog}${ct === 'spark' ? '<div class="kc-spark"></div>' : ct === 'none' ? '' : '<div class="kc-chart"></div>'}`;
 
     // hover: what's behind the number
     el.addEventListener('mousemove', (e) => {
       if (e.target.closest('.kc-spark svg, .kc-chart svg')) return;
-      const rows = [[`${periodLabel(p)} · ${fmtRange(range)}`, fmt(v), true]];
+      const rows = [[rangeText, fmt(v), true]];
       if (cmp) { const k = cmp.caption.replace(/^vs /, ''); rows.push([`${k.charAt(0).toUpperCase() + k.slice(1)} · ${fmtRange(cmp.range)}`, fmt(b)]); }
       if (dinfo) rows.push(['Change', `${dinfo.text}${dinfo.abs ? ` (${dinfo.abs})` : ''}`]);
-      const parts = partsOf(card, c, range);
+      const parts = selR ? [] : partsOf(card, c, range);
       let html = `<div class="kc-tt-head">${esc(name)}</div>` + rows.map(([k, val, strong]) => `<div class="kc-tt-row"><span>${esc(k)}</span><b class="${strong ? 'big' : ''}">${esc(val)}</b></div>`).join('');
       if (parts.length) html += `<div class="kc-tt-sub">= ${esc(c.formula)}</div>` + parts.map((q) => `<div class="kc-tt-row"><span>${esc(q.name)} <i>${esc(ROLLUPS[q.how].toLowerCase())}</i></span><b>${esc(fmtCard(q.v, { ...CARD }, q.unit))}</b></div>`).join('');
       else if (card.kind === 'measure' && (p !== 'day' || model.grain !== 'day')) html += `<div class="kc-tt-sub">Days combined: ${esc(ROLLUPS[c.rollup].toLowerCase())}</div>`;

@@ -120,3 +120,5 @@ html, body {
 .kc-chart rect.kc-b.off { opacity: .28 !important; }
 .kc-sel { stroke: var(--ink-1); stroke-width: 1; stroke-dasharray: 2 2; pointer-events: none; opacity: .5; }
 .kc-spark svg, .kc-chart svg { cursor: pointer; }
+
+.kc-range.sel { color: var(--ink-1); font-weight: 600; }
