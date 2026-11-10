@@ -46,6 +46,10 @@
     align: 'left', // left | center
     background: 'transparent',
     bgColor: '#ffffff',
+    cardFill: 'white', // white | transparent | glass (see-through white) | custom
+    cardColor: '#ffffff',
+    cardBorder: true, // thin border around each card
+    cardTopBar: true, // colored bar on top of each card
     labelSize: 12,
     valueSize: 0, // 0 = fit to the card
     detailSize: 11,
@@ -481,7 +485,7 @@
     const unit = unitOf(card);
     const color = c.color || PALETTE[0];
     const el = document.createElement('div');
-    el.className = 'kc-card' + (cfg.cardStyle === 'plain' ? ' plain' : '') + (cfg.align === 'center' ? ' center' : '');
+    el.className = 'kc-card' + (cfg.cardStyle === 'plain' ? ' plain' : '') + (cfg.cardFill === 'glass' ? ' glass' : '') + (cfg.align === 'center' ? ' center' : '');
     el.style.setProperty('--accent', color);
     const name = cardName(card, c);
 
@@ -801,7 +805,10 @@
     const bg = cfg.background === 'white' ? '#ffffff' : cfg.background === 'custom' ? (cfg.bgColor || '#ffffff') : 'transparent';
     const r = document.documentElement.style;
     r.setProperty('--surface', bg);
-    r.setProperty('--card-bg', bg === 'transparent' ? '#ffffff' : bg);
+    const fill = { transparent: 'transparent', glass: 'rgba(255,255,255,0.55)', custom: cfg.cardColor || '#ffffff' }[cfg.cardFill] || (bg === 'transparent' ? '#ffffff' : bg);
+    r.setProperty('--card-bg', fill);
+    r.setProperty('--card-border', cfg.cardBorder === false ? 'transparent' : 'rgba(11, 11, 11, 0.09)');
+    r.setProperty('--card-topbar', cfg.cardTopBar === false ? '0px' : '3px');
     r.setProperty('--label-size', (+cfg.labelSize || 12) + 'px');
     r.setProperty('--detail-size', (+cfg.detailSize || 11) + 'px');
     r.setProperty('--value-weight', cfg.valueWeight || '700'); r.setProperty('--value-color', cfg.valueColor || '#0b0b0b');

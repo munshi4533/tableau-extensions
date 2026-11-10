@@ -4,13 +4,13 @@
   <base href="../" />
   <!-- GENERATED preview (tools/build.py): sample data instead of Tableau -->
   <meta charset="utf-8" />
-  <meta name="ext-version" content="1.6.1" />
+  <meta name="ext-version" content="1.7.0" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Format KPI Card (preview)</title>
-  <link rel="stylesheet" href="./format.css?v=1.6.1" />
+  <link rel="stylesheet" href="./format.css?v=1.7.0" />
   <script>window.tableau = window.parent.__mockDialogTableau;</script>
-  <script src="./kpi-formula.js?v=1.6.1"></script>
-  <script src="./format.js?v=1.6.1" defer></script>
+  <script src="./kpi-formula.js?v=1.7.0"></script>
+  <script src="./format.js?v=1.7.0" defer></script>
 </head>
 <body>
   <form id="form" class="fx" autocomplete="off">
@@ -180,10 +180,17 @@
           <h2>Background</h2>
           <div class="fx-grid">
             <label class="fx-field">Background
-              <select name="background"><option value="transparent">Transparent (white cards)</option><option value="white">White</option><option value="custom">Custom color</option></select>
+              <select name="background"><option value="transparent">Transparent</option><option value="white">White</option><option value="custom">Custom color</option></select>
             </label>
             <label class="fx-color" id="bgColorField">Color <input type="color" name="bgColor" /></label>
+            <label class="fx-field">Card fill
+              <select name="cardFill"><option value="white">White</option><option value="transparent">Transparent</option><option value="glass">Glass (see-through white)</option><option value="custom">Custom color</option></select>
+            </label>
+            <label class="fx-color" id="cardColorField">Color <input type="color" name="cardColor" /></label>
           </div>
+          <label class="fx-check"><input type="checkbox" name="cardBorder" /> Card border</label>
+          <label class="fx-check"><input type="checkbox" name="cardTopBar" /> Colored bar on top of each card</label>
+          <p class="fx-hint">Background = the area behind the cards. Card fill = inside each card; Transparent or Glass lets your dashboard background show through.</p>
         </section>
       </div>
     </main>

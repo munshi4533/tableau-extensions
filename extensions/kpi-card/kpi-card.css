@@ -32,10 +32,11 @@ html, body {
 .kc-card {
   position: relative; min-width: 0; min-height: 0; overflow: hidden;
   display: flex; flex-direction: column; gap: 3px; padding: 10px 14px 8px;
-  background: var(--card-bg); border: 1px solid var(--line); border-radius: 10px;
-  border-top: 3px solid var(--accent);
+  background: var(--card-bg); border: 1px solid var(--card-border, var(--line)); border-radius: 10px;
+  border-top: var(--card-topbar, 3px) solid var(--accent);
 }
 .kc-card.plain { background: transparent; border: 0; border-radius: 0; padding: 6px 10px; }
+.kc-card.glass { backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
 .kc-card.center { align-items: center; text-align: center; }
 .kc-card.center .kc-label { align-items: center; }
 

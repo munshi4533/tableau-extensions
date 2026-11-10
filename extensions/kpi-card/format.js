@@ -76,6 +76,7 @@
   }
   function refresh () {
     $('bgColorField').hidden = cfg.background !== 'custom';
+    $('cardColorField').hidden = cfg.cardFill !== 'custom';
     $('sparkMonthsField').hidden = !['auto', 'months'].includes(cfg.sparkline);
     $('sparkDaysField').hidden = !['auto', 'days'].includes(cfg.sparkline);
     $('sparkRange').hidden = cfg.sparkline === 'none';
