@@ -88,6 +88,7 @@
     }
     worksheet = tableau.extensions.worksheetContent.worksheet;
     loadSettings();
+    if (!model) document.body.classList.add('is-first-load');
     worksheet.addEventListener(tableau.TableauEventType.SummaryDataChanged, refresh);
     // Parameters (e.g. a Day / Month / Quarter / Year switch inside the Date calculation) and filters:
     // Tableau does not always send SummaryDataChanged for these, or sends it before the new data is
@@ -123,6 +124,7 @@
   //    (shows "No data" only when it stays empty);
   //  - the same data again (duplicate events, selections) does not redraw anything.
   let lastSig = ''; let emptyTries = 0;
+  let selfSelectAt = 0; // time of our own selectTuplesAsync (a click on a bar)
   const EMPTY_WAITS = [400, 800, 1500, 3000, 4500];
   let updTimer = 0;
   function setUpdating (on) {
@@ -136,7 +138,8 @@
     loading = true; loadAgain = false;
     let changed = false; let waiting = false;
     // a slow answer (Tableau Server): show "Updating…" after a moment instead of looking frozen
-    if (lastData) updTimer = setTimeout(() => setUpdating(true), 450);
+    // (not for the reload Tableau sends after our own click: that would fade the bar you just highlighted)
+    if (lastData && Date.now() - selfSelectAt > 4000) updTimer = setTimeout(() => setUpdating(true), 450);
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const [data, enc] = await Promise.all([getRows(), getEncodings()]);
@@ -157,6 +160,7 @@
       }
     }
     loading = false;
+    document.body.classList.remove('is-first-load');
     if (!waiting) setUpdating(false);
     if (changed) render();
     if (loadAgain) load();
@@ -376,7 +380,7 @@
     const days = model.dates.filter((t) => ranges.some(([a, b]) => t >= a && t <= b)).length;
     return compiled(c.formula).run((name) => { const m = findMeasure(name); return m ? rollupRanges(m, ranges, mcfgOf(m).rollup) : null; }, { days });
   }
-  function daysWithData (range) { return model.dates.filter((t) => t >= range[0] && t <= range[1]).length; }
+  function daysWithData (range) { return d3.bisectRight(model.dates, range[1]) - d3.bisectLeft(model.dates, range[0]); }
   function evalFormula (formula, range) {
     if (formulaProblem(formula)) return null;
     return compiled(formula).run((name) => { const m = findMeasure(name); return m ? rollup(m, range, mcfgOf(m).rollup) : null; }, { days: daysWithData(range) });
@@ -740,12 +744,14 @@
     const ids = tuplesIn(ranges);
     if (!ids.length) return;
     sel = { ranges };
+    selfSelectAt = Date.now();
     worksheet.selectTuplesAsync(ids, tableau.SelectOptions.Simple, anchor).catch((e) => console.warn('Could not select', e));
     hideTooltip(); render();
   }
   function clearSelection () {
     if (!sel) return;
     sel = null;
+    selfSelectAt = Date.now();
     worksheet.selectTuplesAsync([], tableau.SelectOptions.Simple, { tooltipAnchorPoint: { x: 0, y: 0 } }).catch(() => {});
     render();
   }

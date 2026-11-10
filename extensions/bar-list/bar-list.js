@@ -49,6 +49,7 @@
     try { await tableau.extensions.initializeAsync({ configure: openFormatDialog }); } catch (e) { showEmpty('<b>Could not start the extension.</b><br>' + esc(e.message || e)); return; }
     worksheet = tableau.extensions.worksheetContent.worksheet;
     loadSettings();
+    if (!model) document.body.classList.add('is-first-load');
     worksheet.addEventListener(tableau.TableauEventType.SummaryDataChanged, refresh);
     try { worksheet.addEventListener(tableau.TableauEventType.FilterChanged, refresh); } catch (e) { /* n/a */ }
     watchParameters();
@@ -65,6 +66,7 @@
   // Smooth updates when other sheets filter this one: Tableau can answer with no rows while it is still
   // applying a filter, so keep the bars and ask again; the same data again does not redraw anything.
   let lastSig = ''; let emptyTries = 0;
+  let selfSelectAt = 0; // time of our own selectTuplesAsync (a click on a bar)
   const EMPTY_WAITS = [400, 800, 1500, 3000, 4500];
   let updTimer = 0;
   function setUpdating (on) {
@@ -78,7 +80,8 @@
     loading = true; loadAgain = false;
     let changed = false; let waiting = false;
     // a slow answer (Tableau Server): show "Updating…" after a moment instead of looking frozen
-    if (lastData) updTimer = setTimeout(() => setUpdating(true), 450);
+    // (not for the reload Tableau sends after our own click: that would fade the bar you just highlighted)
+    if (lastData && Date.now() - selfSelectAt > 4000) updTimer = setTimeout(() => setUpdating(true), 450);
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const [data, enc] = await Promise.all([getRows(), getEncodings()]);
@@ -99,6 +102,7 @@
       }
     }
     loading = false;
+    document.body.classList.remove('is-first-load');
     if (!waiting) setUpdating(false);
     if (changed) render();
     if (loadAgain) load();
@@ -405,17 +409,20 @@
     if (!next.size) { clearSelection(); return; }
     selected = next;
     const ids = [].concat(...lastRows.filter((x) => selected.has(x.name)).map((x) => x.tuples));
+    selfSelectAt = Date.now();
     worksheet.selectTuplesAsync(ids, tableau.SelectOptions.Simple, { tooltipAnchorPoint: { x: e.pageX, y: e.pageY } }).catch((er) => console.warn('Could not select', er));
     markSelection();
   }
   function clearSelection () {
     if (!selected) return;
     selected = null;
+    selfSelectAt = Date.now();
     worksheet.selectTuplesAsync([], tableau.SelectOptions.Simple, { tooltipAnchorPoint: { x: 0, y: 0 } }).catch(() => {});
     markSelection();
   }
   function markSelection () {
     document.querySelectorAll('.bl-row').forEach((x) => x.classList.toggle('dim', !!selected && !selected.has(x.dataset.name)));
+    document.body.classList.toggle('has-selection', !!selected);
   }
 
   // ================================================================ formatting

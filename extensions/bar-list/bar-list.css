@@ -55,3 +55,14 @@ body.is-updating #rows, body.is-updating #header, body.is-updating #legend { opa
 body.is-updating .ext-updating { display: inline-flex; }
 .ext-updating i { width: 10px; height: 10px; border-radius: 50%; border: 2px solid #d9d8d2; border-top-color: #2a78d6; animation: ext-spin .8s linear infinite; }
 @keyframes ext-spin { to { transform: rotate(360deg); } }
+
+/* first load: a small placeholder instead of an empty box */
+body.is-first-load::after { content: "Loading…"; position: fixed; inset: 0; display: grid; place-items: center; font: 12px -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: #898781; background: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.035) 50%, transparent 100%) 0 0 / 200% 100%; animation: ext-shimmer 1.4s linear infinite; pointer-events: none; }
+@keyframes ext-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+
+/* selected bar keeps its color, the rest turn grey */
+.bl-row.dim { opacity: 1; }
+.bl-row.dim .bl-bar, .bl-row.dim .bl-bar i { filter: grayscale(1); opacity: .35; }
+.bl-row.dim .bl-lab, .bl-row.dim .bl-val { opacity: .45; }
+.bl-row:not(.dim) .bl-lab { transition: font-weight .1s; }
+body.has-selection .bl-row:not(.dim) .bl-lab, body.has-selection .bl-row:not(.dim) .bl-val { font-weight: 700; color: var(--ink-1); }
