@@ -80,7 +80,8 @@
       await wait(+params.get('latency') || 30); // ?latency=600 imitates a slow Tableau Server
       if (readerOpen) throw new Error('[mock] A summary data reader is already open. Release it before opening another.');
       readerOpen = true;
-      const d = data();
+      // window.__mockEmptyReads = n: the next n reads return no rows (Tableau mid-way through applying a filter action)
+      const d = window.__mockEmptyReads > 0 ? (window.__mockEmptyReads--, { ...data(), data: [] }) : data();
       const size = pageRowCount || 10000;
       const pageCount = Math.max(1, Math.ceil(d.data.length / size));
       const columns = d.columns.map((c, i) => ({ fieldName: c, index: i, dataType: d.types ? d.types[i] : undefined }));

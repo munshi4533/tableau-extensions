@@ -92,7 +92,7 @@
     // Parameters (e.g. a Day / Month / Quarter / Year switch inside the Date calculation) and filters:
     // Tableau does not always send SummaryDataChanged for these, or sends it before the new data is
     // ready. So reload on the change itself, and once more a moment later (merged with any other reload).
-    try { worksheet.addEventListener(tableau.TableauEventType.FilterChanged, () => { refresh(); setTimeout(refresh, 800); }); } catch (e) { /* not in this host */ }
+    try { worksheet.addEventListener(tableau.TableauEventType.FilterChanged, refresh); } catch (e) { /* not in this host */ }
     watchParameters();
     try {
       tableau.extensions.settings.addEventListener(tableau.TableauEventType.SettingsChanged, () => { loadSettings(); rebuild(); render(); });
@@ -118,25 +118,44 @@
   // One data reader at a time; a burst of SummaryDataChanged events becomes one load.
   let loading = false; let loadAgain = false; let eventTimer = 0;
   function refresh () { clearTimeout(eventTimer); eventTimer = setTimeout(load, 40); }
+  // Smooth updates when other sheets filter this one (dashboard actions, filters, parameters):
+  //  - Tableau can answer with no rows while it is still applying a filter: keep the cards and ask again
+  //    (shows "No data" only when it stays empty);
+  //  - the same data again (duplicate events, selections) does not redraw anything.
+  let lastSig = ''; let emptyTries = 0;
   async function load () {
     if (loading) { loadAgain = true; return; }
     loading = true; loadAgain = false;
+    let changed = false;
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const [data, enc] = await Promise.all([getRows(), getEncodings()]);
-        lastData = data; lastEnc = enc;
-        model = buildModel(data, enc);
+        if (!data.rows.length && lastData && lastData.rows.length && emptyTries < 3) {
+          emptyTries++; setTimeout(refresh, 350 * emptyTries); break;
+        }
+        emptyTries = 0;
+        const sig = signature(data, enc);
+        if (sig !== lastSig || !model || model.error) { lastSig = sig; lastData = data; lastEnc = enc; model = buildModel(data, enc); changed = true; }
         break;
       } catch (e) {
         console.error(e);
         if (loadAgain) break;
         if (attempt === 0) { await new Promise((r) => setTimeout(r, 300)); continue; }
-        if (!lastData) model = { error: e.message || String(e) };
+        if (!lastData) { model = { error: e.message || String(e) }; changed = true; }
       }
     }
     loading = false;
-    render();
+    if (changed) render();
     if (loadAgain) load();
+  }
+  // quick fingerprint of the data (fields + every value) to skip redraws when nothing changed
+  function signature ({ rows, columns }, enc) {
+    let h = 2166136261;
+    const add = (str) => { for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } };
+    add(JSON.stringify(Object.keys(enc).map((k) => [k, (enc[k] || []).map((f) => f.name)])));
+    add(columns.map((c) => c.fieldName).join('|'));
+    for (const r of rows) for (const c of columns) { const dv = r[c.fieldName]; add(dv ? String(dv.value) + '\u0001' + (dv.formattedValue ?? '') : ''); }
+    return rows.length + ':' + (h >>> 0);
   }
   function rebuild () { if (lastData) { try { model = buildModel(lastData, lastEnc); } catch (e) { model = { error: e.message }; } } }
 
