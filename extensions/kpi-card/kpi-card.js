@@ -103,6 +103,7 @@
     }, 60));
     ro.observe(document.body); ro.observe($('cards'));
     document.addEventListener('visibilitychange', () => { if (!document.hidden && model && !drawnSize.w) render(); });
+    document.addEventListener('click', (e) => { if (sel && !e.target.closest('.kc-chart svg, .kc-spark svg, .kc-switch')) clearSelection(); });
     ExtMenu.attach(() => { hideTooltip(); return [ExtMenu.authoring() && { label: 'Format Extension…', icon: 'format', action: openFormatDialog }]; });
     load();
   }
@@ -141,16 +142,17 @@
 
   async function getRows () {
     const reader = await worksheet.getSummaryDataReaderAsync(undefined, { ignoreSelection: true, applyWorksheetFormatting: true });
-    const rows = []; let columns = [];
+    const rows = []; let columns = []; let offset = 0;
     try {
       for (let p = 0; p < reader.pageCount; p++) {
         const page = await reader.getPageAsync(p);
         columns = page.columns;
-        for (const d of page.data) {
-          const row = {};
+        page.data.forEach((d, i) => {
+          const row = { __tupleId: offset + i + 1 };
           for (const c of columns) row[c.fieldName] = d[c.index];
           rows.push(row);
-        }
+        });
+        offset += page.data.length;
       }
     } finally { await reader.releaseAsync().catch(() => {}); }
     return { rows, columns };
@@ -177,9 +179,11 @@
     if (!dateK || !measures.length) throw new Error('Could not find the fields in the sheet data.');
 
     let notDates = 0;
+    const tuplesByDate = new Map(); // date -> Tableau marks (for clicks / dashboard actions)
     for (const r of rows) {
       const t = parseDate(r[dateK]);
       if (t === null) { if (r[dateK] && r[dateK].nativeValue !== null) notDates++; continue; }
+      if (r.__tupleId) (tuplesByDate.get(t) || tuplesByDate.set(t, []).get(t)).push(r.__tupleId);
       for (const m of measures) {
         const dv = r[m.key]; const y = toNumber(dv);
         if (y === null) continue;
@@ -200,7 +204,7 @@
       m.defRollup = defaultRollup(m);
       m.sortedDays = [...m.byDay.keys()].sort((a, b) => a - b);
     });
-    return { measures, dates, grain, dateName: cleanName(dateF.name) };
+    return { measures, dates, grain, dateName: cleanName(dateF.name), tuplesByDate };
   }
 
   // sensible first guess; always changeable in Format → Cards
@@ -377,14 +381,14 @@
     if (mode === 'days' || model.grain !== 'day') {
       const n = Math.max(2, model.grain === 'day' ? +cfg.sparkDays || 30 : (+cfg.sparkMonths || 12) + 1);
       const ds = model.dates.filter((t) => t <= model.latest).slice(-n);
-      for (const t of ds) pts.push({ t, v: valueOf(card, c, [t, t]), label: fmtRange([t, t]) });
+      for (const t of ds) pts.push({ t, v: valueOf(card, c, [t, t]), label: fmtRange([t, t]), ra: t, rb: t });
     } else {
       // month by month, like for like: MTD -> the same days of every month (1st–8th), Last month -> full months
       const [y, m, d] = ymd(model.latest);
       if (p === 'ytd' && m > 0) { // YTD: how the year built up, month by month (Jan, Jan–Feb, … Jan–today)
         for (let i = 0; i <= m; i++) {
           const b = i === m ? model.latest : monthStart(y, i + 1) - 1;
-          pts.push({ t: monthStart(y, i), v: valueOf(card, c, [Date.UTC(y, 0, 1), b]), label: `YTD to ${fmtRange([b, b])}` });
+          pts.push({ t: monthStart(y, i), v: valueOf(card, c, [Date.UTC(y, 0, 1), b]), label: `YTD to ${fmtRange([b, b])}`, ra: monthStart(y, i), rb: b });
         }
         const okY = pts.filter((q) => q.v !== null);
         return okY.length > 1 ? { pts: okY, mode: 'ytd' } : null;
@@ -395,7 +399,7 @@
         const a = monthStart(y, m - i);
         const b = p === 'mtd' ? Date.UTC(y, m - i, Math.min(d, daysIn(y, m - i))) : monthStart(y, m - i + 1) - 1;
         if (b < model.dates[0]) continue;
-        pts.push({ t: a, v: valueOf(card, c, [a, b]), label: fmtRange([a, b]) });
+        pts.push({ t: a, v: valueOf(card, c, [a, b]), label: fmtRange([a, b]), ra: a, rb: b });
       }
     }
     const ok = pts.filter((q) => q.v !== null);
@@ -617,6 +621,7 @@
         .attr('x', (q) => cx(pts.indexOf(q)) - bw / 2).attr('width', bw)
         .attr('y', (q) => Math.min(yDay(q.day), yDay(0))).attr('height', (q) => Math.max(0.5, Math.abs(yDay(q.day) - yDay(0))))
         .attr('rx', cfg.barRound ? Math.min(bw / 2, 6) : 0)
+        .attr('class', (q) => 'kc-b' + (isSelected(q.t, q.t) === false ? ' off' : ''))
         .attr('fill', b.cols.bar).attr('opacity', ct === 'combo' ? 0.75 : 0.85);
     }
     const lineOf = (key, y) => d3.line().defined((q) => q[key] !== null).x((q, i) => cx(i)).y((q) => y(q[key])).curve(curveOf())(pts);
@@ -654,7 +659,45 @@
         if (hasRun || ct === 'bars' || ct === 'line') rows.push([runName() === 'Cumulative' ? 'Running total' : runName(), fmtV(q.cum)]);
         showTooltip(`<div class="kc-tt-head">${esc(fmtRange([q.t, q.t]))}</div>` + rows.map(([k, v]) => `<div class="kc-tt-row"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join(''), ev);
       })
-      .on('mouseleave', () => { guide.attr('display', 'none'); dot.attr('display', 'none'); hideTooltip(); });
+      .on('mouseleave', () => { guide.attr('display', 'none'); dot.attr('display', 'none'); hideTooltip(); })
+      .on('click', (ev) => {
+        const [mx] = d3.pointer(ev);
+        const i = Math.max(0, Math.min(n - 1, Math.floor((mx - x(0) + x.step() * x.paddingInner() / 2) / x.step())));
+        selectRange(pts[i].t, pts[i].t, ev);
+      });
+    if (sel) pts.forEach((q, i) => { if (isSelected(q.t, q.t)) g.append('line').attr('class', 'kc-sel').attr('x1', cx(i)).attr('x2', cx(i)).attr('y1', 0).attr('y2', ih); });
+  }
+
+  // ---------------------------------------------------------------- click to select (dashboard actions)
+  // Selecting the marks of a date / month lets Tableau's filter or highlight actions run on it.
+  // Click the same bar again (or an empty spot) to clear; Ctrl / Cmd + click adds dates.
+  let sel = null; // { ranges: [[a, b], ...] } currently selected dates / months
+  function isSelected (a, b) { return sel ? sel.ranges.some(([x, y]) => a <= y && b >= x) : null; }
+  function tuplesIn (ranges) {
+    const ids = [];
+    model.tuplesByDate.forEach((list, t) => { if (ranges.some(([a, b]) => t >= a && t <= b)) ids.push(...list); });
+    return ids;
+  }
+  function selectRange (a, b, ev) {
+    const add = ev && (ev.ctrlKey || ev.metaKey); // Ctrl / Cmd + click adds or removes one date, like in Tableau
+    const anchor = { tooltipAnchorPoint: { x: ev ? ev.pageX : 0, y: ev ? ev.pageY : 0 } };
+    const same = (r) => r[0] === a && r[1] === b;
+    let ranges;
+    if (add && sel) ranges = sel.ranges.some(same) ? sel.ranges.filter((r) => !same(r)) : [...sel.ranges, [a, b]];
+    else if (sel && sel.ranges.length === 1 && same(sel.ranges[0])) ranges = []; // same bar again = clear
+    else ranges = [[a, b]];
+    if (!ranges.length) { clearSelection(); return; }
+    const ids = tuplesIn(ranges);
+    if (!ids.length) return;
+    sel = { ranges };
+    worksheet.selectTuplesAsync(ids, tableau.SelectOptions.Simple, anchor).catch((e) => console.warn('Could not select', e));
+    hideTooltip(); render();
+  }
+  function clearSelection () {
+    if (!sel) return;
+    sel = null;
+    worksheet.selectTuplesAsync([], tableau.SelectOptions.Simple, { tooltipAnchorPoint: { x: 0, y: 0 } }).catch(() => {});
+    render();
   }
 
   // ---------------------------------------------------------------- status: green / yellow / red
@@ -748,7 +791,15 @@
         dot.attr('display', null).attr('cx', x(i)).attr('cy', y(q.v));
         showTooltip(`<div class="kc-tt-row"><span>${esc(q.label)}</span><b>${esc(fmtCard(q.v, b.c, b.unit))}</b></div>${b.spark.mode === 'months' && b.c && effectivePeriod(b.c) === 'mtd' ? '<div class="kc-tt-sub">Same days of each month, like MTD</div>' : ''}`, ev);
       })
-      .on('mouseleave', () => { dot.attr('display', 'none'); hideTooltip(); });
+      .on('mouseleave', () => { dot.attr('display', 'none'); hideTooltip(); })
+      .on('click', (ev) => {
+        const [mx] = d3.pointer(ev);
+        const q = pts[Math.max(0, Math.min(pts.length - 1, Math.round(x.invert(mx))))];
+        selectRange(q.ra ?? q.t, q.rb ?? q.t, ev);
+      });
+    if (sel) {
+      pts.forEach((q, i) => { if (isSelected(q.ra ?? q.t, q.rb ?? q.t)) svg.append('circle').attr('cx', x(i)).attr('cy', y(q.v)).attr('r', 4.5).attr('fill', '#fff').attr('stroke', b.color).attr('stroke-width', 2.2).style('pointer-events', 'none'); });
+    }
   }
 
   // ---------------------------------------------------------------- change + formatting

@@ -114,3 +114,9 @@ html, body {
 .kc-value.s-good span { color: #006300; }
 .kc-value.s-warn span { color: #8a5d00; }
 .kc-value.s-bad span { color: #b02a2a; }
+
+/* selection for dashboard actions */
+.kc-chart rect.kc-b { transition: opacity .15s; }
+.kc-chart rect.kc-b.off { opacity: .28 !important; }
+.kc-sel { stroke: var(--ink-1); stroke-width: 1; stroke-dasharray: 2 2; pointer-events: none; opacity: .5; }
+.kc-spark svg, .kc-chart svg { cursor: pointer; }
