@@ -37,6 +37,7 @@ A row of KPI cards from a **plain date** and **your measures**. The extension wo
 - If the date is at **MONTH** level, the periods become *This month* and *Last month*.
 
 ## Version history
+- **1.6.1**: Follows parameter and filter changes reliably (e.g. a Day / Month / Quarter / Year switch inside the Date calculation), even when Tableau doesn't send its "data changed" signal. Date ranges show the year on both ends when they cross years ("Oct 2024 – Nov 2026", "Jan – Nov 2026", "Q1 – Q4 2026", "2025 – 2026").
 - **1.6.0**: The status icon hides itself when there is nothing to compare (e.g. Total); per card Icon = Automatic / Always / Hide. Look → Text: size, weight (Regular / Semibold / Bold / Extra bold) and color for the big number, card name and details.
 - **1.5.0**: *Status icon*, a round trend icon left of the big number. The arrow shows direction, the color shows status: by change (with an optional flat band for yellow), by value thresholds, or by % of target (against pace for MTD/YTD). Leave yellow empty for green / red only. Soft or solid icon; optionally color the big number.
 - **1.4.0**: Line style Extra smooth (default), Smooth or Straight, for every line and the mini trend. Rounded bars (top and bottom) on by default. Both in Format → Chart.

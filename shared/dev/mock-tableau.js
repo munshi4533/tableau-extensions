@@ -23,8 +23,12 @@
     fmtMonth: (d) => d.toLocaleString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' }),
     fmtDay: (d) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }),
     fmtMoney: (v, cur = 'SAR') => cur + ' ' + Math.round(v).toLocaleString('en-US'),
-    fmtInt: (v) => Math.round(v).toLocaleString('en-US')
+    fmtInt: (v) => Math.round(v).toLocaleString('en-US'),
+    // current value of a Tableau parameter (scenarios can build their data from it)
+    param: (name, fallback) => (name in paramValues ? paramValues[name] : fallback)
   };
+  const paramValues = {};
+  const paramListeners = {};
 
   let current = null;
   function data () {
@@ -62,6 +66,11 @@
   let readerOpen = false;
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   window.__mockFire = (n = 1) => { for (let i = 0; i < n; i++) dataListeners.forEach((fn) => fn({})); };
+  window.__mockSetParam = (name, value, fireData = true) => {
+    paramValues[name] = value; current = null; // data is rebuilt from the new value
+    (paramListeners[name] || []).forEach((fn) => fn({ parameterName: name }));
+    if (fireData) dataListeners.forEach((fn) => fn({}));
+  };
   const worksheet = {
     name: 'Mock Sheet',
     addEventListener: (type, fn) => { if (type === 'summary-data-changed') dataListeners.push(fn); return () => {}; },
@@ -84,18 +93,21 @@
     },
     getVisualSpecificationAsync: async () => ({ activeMarksSpecificationIndex: 0, marksSpecifications: [{ encodings: data().encodings }] }),
     // scenarios may add params: [{ name, value, formatted }]
-    getParametersAsync: async () => (data().params || []).map((p) => ({
-      name: p.name,
-      currentValue: { value: p.value, nativeValue: p.value, formattedValue: p.formatted || String(p.value) },
-      addEventListener: () => () => {}
-    })),
+    getParametersAsync: async () => (data().params || []).map((p) => {
+      const v = p.name in paramValues ? paramValues[p.name] : p.value;
+      return {
+        name: p.name,
+        currentValue: { value: v, nativeValue: v, formattedValue: p.name in paramValues ? String(v) : (p.formatted || String(v)) },
+        addEventListener: (type, fn) => { (paramListeners[p.name] = paramListeners[p.name] || []).push(fn); return () => {}; }
+      };
+    }),
     hoverTupleAsync: async (id) => { window.__lastHover = id; },
     selectTuplesAsync: async (ids) => { window.__lastSelect = ids; console.log('[mock] select', ids); }
   };
 
   let configureCb = null;
   window.tableau = {
-    TableauEventType: { SummaryDataChanged: 'summary-data-changed', SettingsChanged: 'settings-changed' },
+    TableauEventType: { SummaryDataChanged: 'summary-data-changed', SettingsChanged: 'settings-changed', ParameterChanged: 'parameter-changed', FilterChanged: 'filter-changed' },
     ErrorCodes: { DialogClosedByUser: 'dialog-closed-by-user' },
     SelectOptions: { Simple: 'select-options-simple', Toggle: 'select-options-toggle' },
     ClassNameKey: { Worksheet: 'tableau-worksheet' },

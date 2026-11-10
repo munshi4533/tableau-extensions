@@ -85,6 +85,11 @@
     worksheet = tableau.extensions.worksheetContent.worksheet;
     loadSettings();
     worksheet.addEventListener(tableau.TableauEventType.SummaryDataChanged, refresh);
+    // Parameters (e.g. a Day / Month / Quarter / Year switch inside the Date calculation) and filters:
+    // Tableau does not always send SummaryDataChanged for these, or sends it before the new data is
+    // ready. So reload on the change itself, and once more a moment later (merged with any other reload).
+    try { worksheet.addEventListener(tableau.TableauEventType.FilterChanged, () => { refresh(); setTimeout(refresh, 800); }); } catch (e) { /* not in this host */ }
+    watchParameters();
     try {
       tableau.extensions.settings.addEventListener(tableau.TableauEventType.SettingsChanged, () => { loadSettings(); rebuild(); render(); });
     } catch (e) { /* not available */ }
@@ -96,6 +101,13 @@
     document.addEventListener('visibilitychange', () => { if (!document.hidden && model && !drawnSize.w) render(); });
     ExtMenu.attach(() => { hideTooltip(); return [ExtMenu.authoring() && { label: 'Format Extension…', icon: 'format', action: openFormatDialog }]; });
     load();
+  }
+
+  async function watchParameters () {
+    try {
+      const list = await worksheet.getParametersAsync();
+      list.forEach((p) => p.addEventListener(tableau.TableauEventType.ParameterChanged, () => { refresh(); setTimeout(refresh, 800); }));
+    } catch (e) { /* parameters not available */ }
   }
 
   // One data reader at a time; a burst of SummaryDataChanged events becomes one load.
@@ -277,14 +289,26 @@
     if (p === 'ytd') return { range: [Date.UTC(y - 1, 0, 1), shiftMonths(D, -12)], caption: 'vs LYTD' }; // same days last year
     return { range: [monthStart(y, m - 2), monthStart(y, m - 1) - 1], caption: 'vs previous month' };
   }
+  // "1 Jan – 8 Nov 2026", "Jan – Nov 2026", "Q1 – Q4 2026", "2025 – 2026"; the year on both ends when they differ
   function fmtRange ([a, b]) {
-    const f = d3.utcFormat;
-    if (model.grain !== 'day') return model.grain === 'month' ? f('%b %Y')(new Date(a)) : f('%-d %b %Y')(new Date(a));
-    if (a === b) return f('%-d %b %Y')(new Date(a));
+    const f = d3.utcFormat; const A = new Date(a); const B = new Date(b);
     const [ya, ma, da] = ymd(a); const [yb, mb, db] = ymd(b);
-    if (da === 1 && ya === yb && ma === mb && db === daysIn(yb, mb)) return f('%b %Y')(new Date(a));
-    if (ya === yb && ma === mb) return `${da}–${db} ${f('%b %Y')(new Date(b))}`;
-    return `${f('%-d %b')(new Date(a))} – ${f('%-d %b %Y')(new Date(b))}`;
+    const sameYear = ya === yb;
+    const g = model.grain;
+    if (g === 'year') return sameYear ? `${yb}` : `${ya} – ${yb}`;
+    if (g === 'quarter') {
+      const qa = `Q${Math.floor(ma / 3) + 1}`; const qb = `Q${Math.floor(mb / 3) + 1}`;
+      if (sameYear && qa === qb) return `${qb} ${yb}`;
+      return sameYear ? `${qa} – ${qb} ${yb}` : `${qa} ${ya} – ${qb} ${yb}`;
+    }
+    if (g === 'month') {
+      if (sameYear && ma === mb) return f('%b %Y')(B);
+      return sameYear ? `${f('%b')(A)} – ${f('%b %Y')(B)}` : `${f('%b %Y')(A)} – ${f('%b %Y')(B)}`;
+    }
+    if (a === b) return f('%-d %b %Y')(A);
+    if (da === 1 && sameYear && ma === mb && db === daysIn(yb, mb)) return f('%b %Y')(A);
+    if (sameYear && ma === mb) return `${da}–${db} ${f('%b %Y')(B)}`;
+    return sameYear ? `${f('%-d %b')(A)} – ${f('%-d %b %Y')(B)}` : `${f('%-d %b %Y')(A)} – ${f('%-d %b %Y')(B)}`;
   }
 
   // ---------------------------------------------------------------- values

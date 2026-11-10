@@ -63,3 +63,25 @@ MockTableau.scenario('funnel', (M) => {
   }
   return { columns, data, encodings: [{ id: 'date', field: M.field(columns[0]) }, ...columns.slice(1).map((c) => ({ id: 'measures', field: M.field(c) }))] };
 });
+
+MockTableau.scenario('dateLevel', (M) => {
+  // like a Tableau calc: DATETRUNC([Date Level] parameter, [Disbursement Date]) on the Date shelf
+  const level = String(M.param('Date Level', 'Day')).toLowerCase();
+  const trunc = (d) => {
+    const y = d.getUTCFullYear(); const m = d.getUTCMonth();
+    if (level === 'month') return new Date(Date.UTC(y, m, 1));
+    if (level === 'quarter') return new Date(Date.UTC(y, m - (m % 3), 1));
+    if (level === 'year') return new Date(Date.UTC(y, 0, 1));
+    return d;
+  };
+  const byKey = new Map();
+  loanDays(M, Date.UTC(2025, 0, 1), Date.UTC(2026, 10, 8)).forEach((r) => {
+    const d = trunc(r[0].nativeValue); const k = +d;
+    const o = byKey.get(k) || { d, a: 0, n: 0 };
+    o.a += r[1].value; o.n += r[2].value; byKey.set(k, o);
+  });
+  const mn = (x) => Math.round(x / 1e6).toLocaleString('en-US') + ' Mn';
+  const columns = ['Date by Level', 'SUM(Loan Amount)', 'CNT(Loans)'];
+  const data = [...byKey.values()].map((o) => [M.dv(M.iso(o.d), o.d, M.fmtDay(o.d)), M.dv(o.a, o.a, mn(o.a)), M.dv(o.n, o.n, M.fmtInt(o.n))]);
+  return { columns, data, params: [{ name: 'Date Level', value: 'Day' }], encodings: [{ id: 'date', field: M.field(columns[0]) }, { id: 'measures', field: M.field(columns[1]) }, { id: 'measures', field: M.field(columns[2]) }] };
+});
