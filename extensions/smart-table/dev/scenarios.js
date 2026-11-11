@@ -61,5 +61,18 @@
     }
     return { columns, types, data, encodings: columns.map((c) => ({ id: 'fields', field: M.field(c) })) };
   });
+  // a few contracts (dashboard filtered down to 1–2 rows)
+  function contracts (M, n) {
+    const columns = ['Contract Id', 'Contract Status', 'Loan bucket', 'dpd_bucket', 'SUM(Total Disbursed Amount (SAR))', 'SUM(Total Profit Paid (SAR))', 'SUM(Total Principal Paid (SAR))', 'SUM(Overdue Amount (SAR))', 'SUM(Overdue Days)'];
+    const types = ['string', 'string', 'string', 'string', 'float', 'float', 'float', 'float', 'int'];
+    const rows = [['9b67fbe3-681b-4c2e-9f1a-2b7d', 'REPAID', '50K-100K', 'Current', 75000, 2542.47, 74999.96, 0, 0], ['a41c0d77-25e9-4b0f-8c3e-91aa', 'REPAID', '10K-50K', 'Current', 30000, 980.1, 30000, 0, 0], ['c0ffee12-0000-4b0f-8c3e-91aa', 'ACTIVE', '100K+', '1-30', 150000, 4100, 52000, 3100, 12]];
+    const f2 = (v) => v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const data = rows.slice(0, n).map((r) => r.map((v, i) => (i < 4 ? M.dv(v, v, v) : M.dv(v, v, i === 8 ? String(v) : f2(v)))));
+    return { columns, types, data, encodings: columns.map((c) => ({ id: 'fields', field: M.field(c) })) };
+  }
+  MockTableau.scenario('one', (M) => contracts(M, 1));
+  MockTableau.scenario('two', (M) => contracts(M, 2));
+  // a row with only Null values (shown as an empty line before 1.4.2)
+  MockTableau.scenario('nullrow', (M) => { const d = contracts(M, 1); d.data.unshift(d.columns.map(() => M.dv('%null%', null, 'Null'))); return d; });
   MockTableau.scenario('empty', () => ({ columns: [], data: [], encodings: [] }));
 })();

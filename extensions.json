@@ -29,7 +29,7 @@
   {
     "id": "smart-table",
     "name": "Smart Table",
-    "version": "1.4.1",
+    "version": "1.4.2",
     "description": "Fast flat table for large data (virtual scrolling): sort and filter any column, search, conditional colors, totals, and row selection that drives dashboard actions.",
     "manifestName": "SmartTable",
     "trex": "manifests/SmartTable.trex",

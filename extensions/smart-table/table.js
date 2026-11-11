@@ -70,7 +70,6 @@
   let lefts = [];
   let totalW = 0;
   let rafPending = false;
-  let loadingToken = 0;
   let totalRows = 0; // rows Tableau has for this sheet
   let loadedAll = true; // false while only the first rows are loaded
 
@@ -96,7 +95,7 @@
     const reload = debounce(() => load(false), 150);
     worksheet.addEventListener(tableau.TableauEventType.SummaryDataChanged, reload);
     try { worksheet.addEventListener(tableau.TableauEventType.FilterChanged, reload); } catch (e) { /* not in this host */ }
-    try { (await worksheet.getParametersAsync()).forEach((p) => p.addEventListener(tableau.TableauEventType.ParameterChanged, () => { reload(); setTimeout(reload, 800); })); } catch (e) { /* no parameters */ }
+    try { (await worksheet.getParametersAsync()).forEach((p) => p.addEventListener(tableau.TableauEventType.ParameterChanged, reload)); } catch (e) { /* no parameters */ }
     try {
       tableau.extensions.settings.addEventListener(tableau.TableauEventType.SettingsChanged, onSettingsChanged);
     } catch (e) { /* not available */ }
@@ -164,7 +163,11 @@
   //    stays, faded, with a small "Updating…" badge — but not for the reload after our own click;
   //  - Tableau Server can answer "no rows" for a few seconds on a cold filter query: keep the table and ask
   //    again with growing gaps before showing it empty.
-  let emptyTries = 0; let selfSelectAt = 0; let updTimer = 0;
+  // One read at a time (Tableau allows only one summary-data reader, and a second one while the first is open
+  // fails): events that arrive during a read are merged into ONE more read when it finishes.
+  let emptyTries = 0; let selfSelectAt = 0; let updTimer = 0; let retryTimer = 0;
+  let loading = false; let loadAgain = false; let wantAllNext = false; let failures = 0;
+  let stickyAll = false; // after "Load all", filter changes keep loading all rows
   const EMPTY_WAITS = [400, 800, 1500, 3000, 4500];
   function setUpdating (on) {
     clearTimeout(updTimer);
@@ -173,55 +176,80 @@
     document.body.classList.toggle('is-updating', !!on);
   }
   async function load (all) {
-    all = all === true;
+    if (all === true) wantAllNext = stickyAll = true;
+    if (loading) { loadAgain = true; return; }
+    loading = true; loadAgain = false; clearTimeout(retryTimer);
+    all = wantAllNext || stickyAll; wantAllNext = false;
     const limit = all || cfg.initialRows === 'all' ? Infinity : (+cfg.initialRows || 500);
-    const token = ++loadingToken;
     const t0 = performance.now();
     if (N > 0 && !all) updTimer = setTimeout(() => { if (Date.now() - selfSelectAt > 4000) setUpdating(true); }, 450); // checked when it fires: the click may come a moment later
     let waiting = false;
     try {
-      const enc = await getEncodings();
-      const fields = enc.fields || [];
-      if (!fields.length) { N = 0; cols = []; shown = []; layout(); status('Drag fields onto the <b>Fields</b> shelf to build the table.<br><span style="color:var(--ink-3)">Dimensions and measures, in the order you want the columns.</span>'); return; }
-
-      if (all) status('Loading all rows…');
-      const reader = await worksheet.getSummaryDataReaderAsync(Math.min(limit, PAGE_ROWS), { ignoreSelection: true });
-      const total = reader.totalRowCount || 0;
-      if (!total && N > 0 && emptyTries < EMPTY_WAITS.length) { // keep the table while Tableau finishes the filter
-        await reader.releaseAsync().catch(() => {});
-        waiting = true; setUpdating(true); setTimeout(() => load(false), EMPTY_WAITS[emptyTries++]);
-        return;
+      for (let attempt = 0; ; attempt++) {
+        try {
+          const r = await readOnce(all, limit, t0);
+          if (r === 'empty') { // Tableau mid-way through a filter: keep the table, ask again shortly
+            waiting = true; setUpdating(true);
+            retryTimer = setTimeout(() => load(false), EMPTY_WAITS[emptyTries++]);
+          } else if (r === 'aborted') { if (all) wantAllNext = true; }
+          failures = 0;
+          break;
+        } catch (e) {
+          console.warn('[Smart Table] read failed', e);
+          if (attempt === 0 && !loadAgain) { await new Promise((r) => setTimeout(r, 400)); continue; }
+          failures++;
+          // a table is already on screen: keep it and try again in a moment instead of showing an error
+          if (N > 0 && failures <= 3) { waiting = true; setUpdating(true); retryTimer = setTimeout(() => load(false), 1500 * failures); } else status(`<b>Could not load the data.</b><br>${esc(e.message || e)}<br><span style="color:var(--ink-3)">It retries on the next filter change, or refresh the page.</span>`);
+          break;
+        }
       }
-      emptyTries = 0;
-      const tRead = performance.now();
-      let built = null;
-      let offset = 0;
-      let tWait = 0;
+    } finally {
+      loading = false;
+      document.body.classList.remove('is-first-load');
+      if (!waiting) setUpdating(false);
+      if (loadAgain) { clearTimeout(retryTimer); load(false); }
+    }
+  }
+  // a row whose every value is Null (Tableau sometimes sends one while it applies a filter, or the data has one)
+  const blankRow = (row) => row.every((dv) => !dv || dv.nativeValue === null || dv.nativeValue === undefined || dv.value === '%null%');
+  async function readOnce (all, limit, t0) {
+    // fields and data are asked for together (one round trip less); a reader that opened is always released
+    const [encR, readerR] = await Promise.allSettled([getEncodings(), worksheet.getSummaryDataReaderAsync(Math.min(limit, PAGE_ROWS), { ignoreSelection: true })]);
+    if (readerR.status === 'rejected') throw readerR.reason;
+    const reader = readerR.value;
+    if (encR.status === 'rejected') { await reader.releaseAsync().catch(() => {}); throw encR.reason; }
+    const enc = encR.value;
+    let built = null; let offset = 0; let tWait = 0; let skipped = 0; let total = 0;
+    const tRead = performance.now();
+    try {
+      const fields = enc.fields || [];
+      if (!fields.length) { N = 0; cols = []; shown = []; layout(); status('Drag fields onto the <b>Fields</b> shelf to build the table.<br><span style="color:var(--ink-3)">Dimensions and measures, in the order you want the columns.</span>'); return 'done'; }
+      total = reader.totalRowCount || 0;
+      if (all) status('Loading all rows…');
       for (let p = 0; p < reader.pageCount && offset < limit; p++) {
-        if (token !== loadingToken) { await reader.releaseAsync(); return; }
+        if (loadAgain && !all) return 'aborted'; // newer filter state: read again instead
         const tw = performance.now();
         const page = await reader.getPageAsync(p);
         tWait += performance.now() - tw;
-        if (!built) built = allocate(page.columns, Math.max(Math.min(total, limit), page.data.length));
-        fill(built, page, offset);
-        offset += page.data.length;
+        const rows = page.data.filter((row) => !blankRow(row));
+        skipped += page.data.length - rows.length;
+        if (!built) built = allocate(page.columns, Math.max(Math.min(total, limit), rows.length));
+        fill(built, { data: rows }, offset);
+        offset += rows.length;
         if (reader.pageCount > 1 && limit > PAGE_ROWS) status(`Loading rows… ${offset.toLocaleString()} of ${total.toLocaleString()}`);
       }
-      await reader.releaseAsync();
-      if (token !== loadingToken) return;
+      if (!offset && N > 0 && emptyTries < EMPTY_WAITS.length) return 'empty';
+      emptyTries = 0;
       if (!built) built = allocate([], 0);
+      if (skipped) console.log(`[Smart Table] skipped ${skipped} row(s) with only Null values`);
       const tFin = performance.now();
-      totalRows = Math.max(total, offset);
+      totalRows = Math.max(total - skipped, offset);
       loadedAll = offset >= totalRows;
       finish(built, offset, fields);
       console.log(`[Smart Table] ${N.toLocaleString()} rows × ${cols.length} columns in ${Math.round(performance.now() - t0)} ms ` +
         `(Tableau: ${Math.round(tRead - t0 + tWait)} ms, reading: ${Math.round(tFin - tRead - tWait)} ms, layout+render: ${Math.round(performance.now() - tFin)} ms)`);
-    } catch (e) {
-      console.error(e);
-      status(`<b>Something went wrong.</b><br>${esc(e.message || e)}`);
-    } finally {
-      if (token === loadingToken) { document.body.classList.remove('is-first-load'); if (!waiting) setUpdating(false); }
-    }
+      return 'done';
+    } finally { await reader.releaseAsync().catch(() => {}); }
   }
 
   function allocate (columns, n) {
@@ -318,7 +346,10 @@
     root.setProperty('--bg', base);
     root.setProperty('--base', base);
     root.setProperty('--solid', base === 'transparent' ? '#ffffff' : base);
-    document.body.className = [cfg.zebra ? 'zebra' : '', 'grid-' + cfg.gridlines, String(cfg.headerLines) === '1' ? 'head-1' : ''].join(' ');
+    // (classList, not className: keep is-first-load / is-updating)
+    const bc = document.body.classList;
+    [...bc].filter((c) => c.startsWith('grid-')).forEach((c) => bc.remove(c));
+    bc.toggle('zebra', !!cfg.zebra); bc.add('grid-' + cfg.gridlines); bc.toggle('head-1', String(cfg.headerLines) === '1');
 
     $('toolbar').hidden = !cfg.showToolbar;
     $('dl').hidden = !cfg.showDownload;

@@ -88,7 +88,7 @@
       return {
         pageCount,
         totalRowCount: d.data.length,
-        getPageAsync: async (p) => { await wait(20); return { columns, data: d.data.slice(p * size, (p + 1) * size) }; },
+        getPageAsync: async (p) => { await wait(+params.get('pageLatency') || 20); return { columns, data: d.data.slice(p * size, (p + 1) * size) }; },
         releaseAsync: async () => { readerOpen = false; }
       };
     },
