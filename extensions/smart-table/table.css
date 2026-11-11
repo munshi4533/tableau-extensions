@@ -164,3 +164,7 @@ body.is-updating .ext-updating { display: inline-flex; }
 body.is-first-load::after { content: "Loading…"; position: fixed; inset: 0; display: grid; place-items: center; font: 12px -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: #898781; background: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.035) 50%, transparent 100%) 0 0 / 200% 100%; animation: ext-shimmer 1.4s linear infinite; pointer-events: none; }
 @keyframes ext-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 
+
+/* unused row slots (fewer records than fit on screen) must not show: without this, display:flex beat
+   the hidden attribute and the empty slots sat on top of the first row */
+.t-body .t-row[hidden] { display: none; }

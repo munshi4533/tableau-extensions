@@ -210,8 +210,9 @@
       if (loadAgain) { clearTimeout(retryTimer); load(false); }
     }
   }
-  // a row whose every value is Null (Tableau sometimes sends one while it applies a filter, or the data has one)
-  const blankRow = (row) => row.every((dv) => !dv || dv.nativeValue === null || dv.nativeValue === undefined || dv.value === '%null%');
+  // a row whose every column is Null: Tableau can send one while it applies a dashboard filter
+  const isNullDv = (dv) => !dv || dv.nativeValue === null || dv.nativeValue === undefined || dv.value === '%null%' || dv.value === null;
+  const blankRow = (row, idx) => (idx && idx.length ? idx : row.map((d, i) => i)).every((i) => isNullDv(row[i]));
   async function readOnce (all, limit, t0) {
     // fields and data are asked for together (one round trip less); a reader that opened is always released
     const [encR, readerR] = await Promise.allSettled([getEncodings(), worksheet.getSummaryDataReaderAsync(Math.min(limit, PAGE_ROWS), { ignoreSelection: true })]);
@@ -231,7 +232,7 @@
         const tw = performance.now();
         const page = await reader.getPageAsync(p);
         tWait += performance.now() - tw;
-        const rows = page.data.filter((row) => !blankRow(row));
+        const rows = page.data.filter((row) => !blankRow(row)); // (every column Null; real records always show, like in Tableau)
         skipped += page.data.length - rows.length;
         if (!built) built = allocate(page.columns, Math.max(Math.min(total, limit), rows.length));
         fill(built, { data: rows }, offset);
@@ -246,6 +247,7 @@
       totalRows = Math.max(total - skipped, offset);
       loadedAll = offset >= totalRows;
       finish(built, offset, fields);
+      if (!N) status(skipped ? '<b>No data</b> for the current filters.<br><span style="color:var(--ink-3)">Tableau sent only empty (Null) rows: the dashboard filter matches nothing in this sheet\'s data.</span>' : '<b>No data</b> for the current filters.');
       console.log(`[Smart Table] ${N.toLocaleString()} rows × ${cols.length} columns in ${Math.round(performance.now() - t0)} ms ` +
         `(Tableau: ${Math.round(tRead - t0 + tWait)} ms, reading: ${Math.round(tFin - tRead - tWait)} ms, layout+render: ${Math.round(performance.now() - tFin)} ms)`);
       return 'done';

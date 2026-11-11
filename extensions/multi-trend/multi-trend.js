@@ -185,6 +185,8 @@
     const dateF = enc.date && enc.date[0];
     const mFields = enc.measures || [];
     if (!dateF || !mFields.length) return { empty: true, needDate: !dateF, needMeasures: !mFields.length };
+    // a dashboard filter can leave no rows: Tableau then sends no columns either (not an error)
+    if (!rows.length) return { empty: true, noData: true };
     const names = columns.map((c) => c.fieldName);
     const taken = new Set();
     const key = (f) => { const k = resolve(f.name, names.filter((n) => !taken.has(n))) || resolve(f.name, names); if (k) taken.add(k); return k; };
@@ -266,7 +268,7 @@
     if (model.error) { hideChrome(); showEmpty('<b>Something went wrong.</b><br>' + esc(model.error)); return; }
     if (model.empty) {
       hideChrome();
-      if (model.noData) showEmpty('<b>No data to plot.</b>');
+      if (model.noData) showEmpty('<b>No data</b> for the current filters.');
       else showEmpty(`Drag ${[model.needDate && '<b>Date</b> (a date or period)', model.needMeasures && 'one or more measures to <b>Measures</b>'].filter(Boolean).join(' and ')} on the Marks card.<br><span style="color:var(--ink-3)">Style each measure (dashed, bars, colors, right axis) in Format Extension.</span>`);
       return;
     }

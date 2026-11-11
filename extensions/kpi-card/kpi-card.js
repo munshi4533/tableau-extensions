@@ -207,6 +207,8 @@
     const dateF = enc.date && enc.date[0];
     const mFields = enc.measures || [];
     if (!dateF || !mFields.length) return { empty: true, needDate: !dateF, needMeasures: !mFields.length };
+    // a dashboard filter can leave no rows: Tableau then sends no columns either (not an error)
+    if (!rows.length) return { empty: true, noData: true };
     const names = columns.map((c) => c.fieldName);
     const taken = new Set();
     const key = (f) => { const k = resolve(f.name, names.filter((n) => !taken.has(n))) || resolve(f.name, names); if (k) taken.add(k); return k; };
@@ -480,7 +482,7 @@
     if (model.error) { $('header').hidden = true; return showEmpty('<b>Something went wrong.</b><br>' + esc(model.error)); }
     if (model.empty) {
       $('header').hidden = true;
-      if (model.noData) return showEmpty(model.notDates ? '<b>Date needs a real date.</b><br>Use DAY(your date) or an exact date on <b>Date</b>.' : '<b>No data.</b> Check the filters.');
+      if (model.noData) return showEmpty(model.notDates ? '<b>Date needs a real date.</b><br>Use DAY(your date) or an exact date on <b>Date</b>.' : '<b>No data</b> for the current filters.');
       return showEmpty(`Drag ${[model.needDate && 'a <b>Date</b> (DAY level)', model.needMeasures && 'one or more <b>Measures</b>'].filter(Boolean).join(' and ')} onto the Marks card.<br><span style="color:var(--ink-3)">Then add calculated KPIs and choose MTD / last month / last day in Format Extension.</span>`);
     }
 

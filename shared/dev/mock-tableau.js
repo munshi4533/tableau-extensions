@@ -91,7 +91,7 @@
       served = d.data.map((r, i) => i);
       if (params.get('selfFilter') && sel.length) { served = sel.filter((i) => i < d.data.length); d = { ...d, data: served.map((i) => d.data[i]) }; }
       const size = pageRowCount || 10000;
-      const pageCount = Math.max(1, Math.ceil(d.data.length / size));
+      const pageCount = Math.ceil(d.data.length / size); // 0 pages when there are no rows (like Tableau: no columns either)
       const columns = d.columns.map((c, i) => ({ fieldName: c, index: i, dataType: d.types ? d.types[i] : undefined }));
       return {
         pageCount,

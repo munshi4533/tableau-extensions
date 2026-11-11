@@ -63,6 +63,8 @@ Click the download icon in the top-right corner:
 **Columns tab:** rename headers, choose alignment, hide columns.
 
 ## Version history
+- **1.4.4**: Fixed: with fewer records than fit on screen (e.g. 14 or 30), the first row showed empty. Spare row slots were drawn on top of it; they are hidden now. Only rows where every column is Null are left out.
+- **1.4.3**: No more empty line: a row whose fields are all Null (a dashboard filter that matches nothing in this sheet's data) is left out, and an empty result says "No data for the current filters".
 - **1.4.2**: Stability on Tableau Server. Reads data one request at a time (a second read while one was open made the table show an error), merges bursts of filter events into one read (faster), keeps the table and retries quietly if a read fails, keeps "Load all" after filter changes, and no longer shows an empty line for a row where every value is Null.
 - **1.4.1**: Dashboard loading like KPI Card: "Loading…" on open, "Updating…" badge while other sheets filter the table slowly, no empty flash while Tableau Server applies a filter; follows parameter and filter changes reliably.
 - **1.4.0**: right-click menu: Format Extension (when editing), sort/filter on headers, load all, clear filters, download CSV, copy.

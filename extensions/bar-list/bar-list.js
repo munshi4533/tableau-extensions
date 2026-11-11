@@ -171,6 +171,8 @@
     const catFs = enc.category || [];
     const mF = enc.measures || [];
     if (!catFs.length || !mF.length) return { empty: true, needCat: !catFs.length, needMeasures: !mF.length };
+    // a dashboard filter can leave no rows: Tableau then sends no columns either (not an error)
+    if (!rows.length) return { empty: true, noData: true };
     const names = columns.map((c) => c.fieldName);
     const taken = new Set();
     const key = (f) => { if (!f) return null; const k = resolve(f.name, names.filter((n) => !taken.has(n))) || resolve(f.name, names); if (k) taken.add(k); return k; };
@@ -346,8 +348,10 @@
     const box = $('rows'); box.innerHTML = '';
     if (!model) return;
     if (model.error) { $('header').hidden = true; return showEmpty('<b>Something went wrong.</b><br>' + esc(model.error)); }
+    if (model.noData) { $('header').hidden = true; $('legend').hidden = true; return showEmpty('<b>No data</b> for the current filters.'); }
     if (model.empty) { $('header').hidden = true; return showEmpty(`Drag ${[model.needCat && 'a <b>Category</b> (dimension)', model.needMeasures && 'one or more <b>Measures</b>'].filter(Boolean).join(' and ')} onto the Marks card.`); }
     const k = currentKpi();
+    if (!k) { $('header').hidden = true; return showEmpty('<b>No data</b> for the current filters.'); }
     if (k.kind === 'calc' && formulaProblem(k.c.formula)) return showEmpty('<b>' + esc(kpiName(k)) + '</b>: ' + esc(formulaProblem(k.c.formula)));
     $('empty').hidden = true;
     syncExpanded();

@@ -34,6 +34,7 @@ Ranked bars for one dimension, e.g. Salary Bucket, Simah Score or Employment, sh
 - **Many bars:** the list scrolls instead of squeezing the bars.
 
 ## Version history
+- **1.3.4**: A dashboard filter that leaves no rows shows "No data for the current filters" instead of "Could not draw the bars".
 - **1.3.3**: Works with one dashboard filter action that targets every sheet (Bar List included). When your own click filters Bar List, it keeps showing all bars with the selected one in color; clicking another bar clears and re-selects automatically; all bars stay even if Tableau reloads the extension.
 - **1.3.2**: Clicking on Tableau Server. A click made while the bars are reloading is sent once the reload is done (with up-to-date marks), so fast clicks no longer select the wrong marks or reset the dashboard; the highlight follows Tableau's selection, also after Tableau reloads the extension; no "Updating…" fade right after your own click.
 - **1.3.1**: A closed bar's tooltip lists its sub-categories (largest first, value · % of the bar). Long category names wrap onto up to 3 lines and the row grows to fit (Format → Bars → Labels → Long names: wrap, or one line cut with …).

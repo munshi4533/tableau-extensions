@@ -73,6 +73,8 @@
   MockTableau.scenario('one', (M) => contracts(M, 1));
   MockTableau.scenario('two', (M) => contracts(M, 2));
   // a row with only Null values (shown as an empty line before 1.4.2)
+  // only a Null row, with a non-null detail field (a dashboard filter that matches nothing in this data source)
+  MockTableau.scenario('nullonly', (M) => { const d = contracts(M, 1); d.data = [d.columns.map(() => M.dv('%null%', null, 'Null'))]; d.columns.push('CNT(Records)'); d.types.push('int'); d.data[0].push(M.dv(1, 1, '1')); d.encodings.push({ id: 'detail', field: M.field('CNT(Records)') }); return d; });
   MockTableau.scenario('nullrow', (M) => { const d = contracts(M, 1); d.data.unshift(d.columns.map(() => M.dv('%null%', null, 'Null'))); return d; });
   MockTableau.scenario('empty', () => ({ columns: [], data: [], encodings: [] }));
 })();
