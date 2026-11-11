@@ -12,6 +12,76 @@
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const opts = (list, v) => list.map(([k, t]) => `<option value="${esc(k)}" ${String(k) === String(v) ? 'selected' : ''}>${esc(t)}</option>`).join('');
+  // ---- presets: the look only (never KPIs, formulas, Top N, sort or title text)
+  const STYLE_KEYS = ['thickness', 'barSize', 'corners', 'track', 'colorMode', 'barColor', 'barColor2', 'gradientSpan',
+    'labelContent', 'labelPos', 'labelAlign', 'labelSize', 'valueSize', 'valueWeight', 'labelColor', 'valueColor',
+    'titleSize', 'titleAlign', 'showTitle', 'nullLast', 'background', 'bgColor'];
+  // Team presets: built into the extension, the same for everyone (send a style code to add one)
+  const TEAM_PRESETS = [
+    { name: 'Affordability (amber, thin)', style: { thickness: 'thin', corners: 'pill', track: 'none', colorMode: 'single', barColor: '#f2b01e', labelContent: 'both', labelPos: 'auto', nullLast: false } },
+    { name: 'Status (navy gradient, total track)', style: { thickness: 'custom', barSize: 10, corners: 'pill', track: 'total', colorMode: 'gradient', barColor: '#1e2a78', barColor2: '#4fc3e8', gradientSpan: 'width', labelContent: 'both' } }
+  ];
+  const LS_PRESETS = 'barlist.presets.v1'; const LS_DEFAULT = 'barlist.defaultStyle.v1';
+  const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } };
+  const lsSet = (k, v) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } };
+  const pick = (o) => Object.fromEntries(STYLE_KEYS.filter((k) => o[k] !== undefined).map((k) => [k, o[k]]));
+  const encode = (style) => 'BL1:' + btoa(unescape(encodeURIComponent(JSON.stringify(style))));
+  function decode (code) {
+    const m = String(code || '').trim().match(/^BL1:([A-Za-z0-9+/=]+)$/);
+    if (!m) throw new Error('This is not a Bar List style code (it starts with BL1:).');
+    return pick(JSON.parse(decodeURIComponent(escape(atob(m[1])))));
+  }
+  function allPresets () { return [...TEAM_PRESETS.map((x) => ({ ...x, team: true })), ...lsGet(LS_PRESETS, [])]; }
+  function presetMsg (text, ok) { const el = $('presetMsg'); el.textContent = text; el.className = 'fx-hint ' + (ok ? 'ok' : 'err'); }
+  function fillPresets (sel) {
+    const def = JSON.stringify(lsGet(LS_DEFAULT, null));
+    $('presetSelect').innerHTML = allPresets().map((x, i) => `<option value="${i}">${esc(x.name)}${x.team ? ' (team)' : ''}${JSON.stringify(x.style) === def ? ' · default' : ''}</option>`).join('');
+    if (sel !== undefined) $('presetSelect').value = String(sel);
+    syncDefaultBox();
+  }
+  function current () { return allPresets()[+$('presetSelect').value]; }
+  function syncDefaultBox () { const x = current(); $('presetDefault').checked = !!x && JSON.stringify(lsGet(LS_DEFAULT, null)) === JSON.stringify(x.style); $('presetDelete').disabled = !x || x.team; }
+  function applyStyle (style, label) {
+    Object.assign(cfg, style); fillSimple(); refresh(); scheduleSave();
+    presetMsg(`Applied ${label}.`, true);
+  }
+  function setupPresets () {
+    fillPresets(0);
+    $('presetSelect').addEventListener('change', syncDefaultBox);
+    $('presetApply').addEventListener('click', () => { const x = current(); if (x) applyStyle(x.style, `"${x.name}"`); });
+    $('presetDelete').addEventListener('click', () => {
+      const x = current(); if (!x || x.team) return;
+      lsSet(LS_PRESETS, lsGet(LS_PRESETS, []).filter((p) => p.name !== x.name));
+      if (JSON.stringify(lsGet(LS_DEFAULT, null)) === JSON.stringify(x.style)) lsSet(LS_DEFAULT, null);
+      fillPresets(0); presetMsg(`Deleted "${x.name}".`, true);
+    });
+    $('presetDefault').addEventListener('change', (e) => {
+      const x = current(); if (!x) return;
+      lsSet(LS_DEFAULT, e.target.checked ? x.style : null); fillPresets(+$('presetSelect').value);
+      presetMsg(e.target.checked ? `New Bar Lists on this computer will start with "${x.name}".` : 'New Bar Lists start with the standard look.', true);
+    });
+    $('presetSave').addEventListener('click', () => {
+      const name = $('presetName').value.trim();
+      if (!name) { presetMsg('Type a name for the preset first.', false); $('presetName').focus(); return; }
+      const mine = lsGet(LS_PRESETS, []).filter((p) => p.name !== name);
+      mine.push({ name, style: pick(cfg) });
+      if (!lsSet(LS_PRESETS, mine)) { presetMsg('Could not save on this computer (browser storage is blocked). Use "Copy style code" instead.', false); return; }
+      $('presetName').value = '';
+      fillPresets(TEAM_PRESETS.length + mine.length - 1); presetMsg(`Saved "${name}". Apply it in any Bar List on this computer.`, true);
+    });
+    $('presetCopy').addEventListener('click', async () => {
+      const code = encode(pick(cfg)); const ta = $('presetCode');
+      ta.hidden = false; ta.value = code; ta.select(); $('presetCodeRow').hidden = true;
+      let ok = false;
+      try { await navigator.clipboard.writeText(code); ok = true; } catch (e) { try { ok = document.execCommand('copy'); } catch (e2) { /* no clipboard */ } }
+      presetMsg(ok ? 'Style code copied. Paste it into another Bar List (Presets → Paste style code), or send it to add it as a team preset.' : 'Select the code above and copy it (Cmd/Ctrl + C).', true);
+    });
+    $('presetPaste').addEventListener('click', () => { const ta = $('presetCode'); ta.hidden = false; ta.value = ''; ta.focus(); $('presetCodeRow').hidden = false; presetMsg('', true); });
+    $('presetUseCode').addEventListener('click', () => {
+      try { applyStyle(decode($('presetCode').value), 'the pasted style'); } catch (e) { presetMsg(e.message, false); }
+    });
+  }
+
   const NUM = new Set(['topN', 'labelSize', 'valueSize', 'titleSize', 'barSize']);
 
   const verMeta = document.querySelector('meta[name="ext-version"]');
@@ -26,7 +96,7 @@
     cfg = JSON.parse(JSON.stringify({ ...DEFAULTS, ...saved }));
     cfg.measures = cfg.measures || {}; cfg.calcs = cfg.calcs || [];
 
-    fillKpiSelect(); fillSimple(); drawKpis(); refresh();
+    fillKpiSelect(); fillSimple(); drawKpis(); refresh(); setupPresets();
 
     form.addEventListener('input', (e) => {
       const el = e.target;

@@ -1,7 +1,7 @@
 {
   "name": "Bar List",
   "manifestName": "BarList",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Ranked bars for a dimension: value and % of total, Top N + Others, several KPIs with switch buttons (incl. calculated ones), optional breakdown and target, thin to thick and square to round bars.",
   "entry": "index.html",
   "icon": "icon.png",

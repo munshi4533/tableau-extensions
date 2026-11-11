@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="ext-version" content="1.1.0" />
+  <meta name="ext-version" content="1.2.0" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Format Bar List</title>
-  <link rel="stylesheet" href="./format.css?v=1.1.0" />
-  <script src="../../shared/lib/tableau.extensions.1.latest.min.js?v=1.1.0"></script>
-  <script src="./kpi-formula.js?v=1.1.0"></script>
-  <script src="./format.js?v=1.1.0" defer></script>
+  <link rel="stylesheet" href="./format.css?v=1.2.0" />
+  <script src="../../shared/lib/tableau.extensions.1.latest.min.js?v=1.2.0"></script>
+  <script src="./kpi-formula.js?v=1.2.0"></script>
+  <script src="./format.js?v=1.2.0" defer></script>
 </head>
 <body>
   <form id="form" class="fx" autocomplete="off">
@@ -19,6 +19,7 @@
         <button type="button" data-tab="kpis" class="on">KPIs</button>
         <button type="button" data-tab="bars">Bars</button>
         <button type="button" data-tab="look">Look</button>
+        <button type="button" data-tab="presets">Presets</button>
       </nav>
     </header>
 
@@ -97,6 +98,39 @@
             </label>
           </div>
           <p class="fx-hint">With a Breakdown dimension, segments take a color per breakdown value.</p>
+        </section>
+      </div>
+
+      <div class="fx-tab" data-pane="presets" hidden>
+        <section>
+          <h2>Apply a preset</h2>
+          <div class="fx-grid">
+            <label class="fx-field">Preset <select id="presetSelect"></select></label>
+          </div>
+          <div class="preset-row">
+            <button type="button" id="presetApply" class="fx-btn primary">Apply</button>
+            <button type="button" id="presetDelete" class="fx-btn ghost">Delete</button>
+          </div>
+          <label class="fx-check"><input type="checkbox" id="presetDefault"> Start new Bar Lists with this preset <small>(on this computer)</small></label>
+          <p class="fx-hint">A preset holds the look only: bar shape and height, track, colors, labels, text and background. Your KPIs, formulas, Top N, sort and title stay as they are.</p>
+        </section>
+        <section>
+          <h2>Save the current look</h2>
+          <div class="preset-row">
+            <input type="text" id="presetName" placeholder="e.g. Affordability amber" />
+            <button type="button" id="presetSave" class="fx-btn ghost">Save as preset</button>
+          </div>
+          <p class="fx-hint">Saved presets live on this computer (the browser Tableau uses). To share one with your team or use it on Server, copy its style code below.</p>
+        </section>
+        <section>
+          <h2>Share</h2>
+          <div class="preset-row">
+            <button type="button" id="presetCopy" class="fx-btn ghost">Copy style code</button>
+            <button type="button" id="presetPaste" class="fx-btn ghost">Paste style code…</button>
+          </div>
+          <textarea id="presetCode" rows="3" hidden placeholder="Paste a style code here, then click Apply code"></textarea>
+          <div class="preset-row" id="presetCodeRow" hidden><button type="button" id="presetUseCode" class="fx-btn primary">Apply code</button></div>
+          <p class="fx-hint" id="presetMsg"></p>
         </section>
       </div>
 

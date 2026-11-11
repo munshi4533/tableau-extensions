@@ -473,8 +473,19 @@
   function hideTooltip () { const t = $('tooltip'); if (t) t.hidden = true; }
   function showEmpty (html) { const el = $('empty'); el.innerHTML = `<div>${html}</div>`; el.hidden = false; }
   function loadSettings () {
-    let saved = {};
-    try { const raw = tableau.extensions.settings.get('config'); if (raw) saved = JSON.parse(raw); } catch (e) { /* none */ }
+    let saved = {}; let raw = null;
+    try { raw = tableau.extensions.settings.get('config'); if (raw) saved = JSON.parse(raw); } catch (e) { /* none */ }
+    // a brand-new Bar List: start with this computer's default preset (Format → Presets), saved into the workbook
+    if (!raw) {
+      let def = null;
+      try { def = JSON.parse(localStorage.getItem('barlist.defaultStyle.v1') || 'null'); } catch (e) { /* storage blocked */ }
+      if (def && typeof def === 'object') {
+        saved = def;
+        try {
+          if (tableau.extensions.environment.mode === 'authoring') { tableau.extensions.settings.set('config', JSON.stringify({ ...DEFAULTS, ...def })); tableau.extensions.settings.saveAsync().catch(() => {}); }
+        } catch (e) { /* viewing: just show it */ }
+      }
+    }
     cfg = { ...DEFAULTS, ...saved }; cfg.measures = cfg.measures || {}; cfg.calcs = cfg.calcs || [];
   }
   async function openFormatDialog () {

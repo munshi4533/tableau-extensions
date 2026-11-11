@@ -130,3 +130,9 @@ section[hidden] { display: none; }
 .fx-text .n { color: var(--ink-2); font-weight: 500; }
 .fx-text select { width: 100%; font: inherit; padding: 5px 7px; border: 1px solid var(--field); border-radius: 6px; background: white; }
 .fx-text input[type=color] { width: 40px; height: 28px; padding: 0; border: 1px solid var(--field); border-radius: 6px; background: none; cursor: pointer; }
+
+/* ---- presets ---- */
+.preset-row { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
+.preset-row input[type=text] { flex: 1; font: inherit; padding: 6px 8px; border: 1px solid var(--field); border-radius: 6px; }
+#presetCode { width: 100%; font: 11px ui-monospace, Menlo, Consolas, monospace; padding: 6px 8px; border: 1px solid var(--field); border-radius: 6px; margin-top: 6px; resize: vertical; }
+#presetMsg.ok { color: #006300; } #presetMsg.err { color: #b02a2a; }

@@ -20,6 +20,7 @@ Ranked bars for one dimension, e.g. Salary Bucket, Simah Score or Employment, sh
      - Bar shape: thickness and corners, plus a fill-up track.
      - Colors.
    - **Look:** title, text sizes and colors, background.
+   - **Presets:** apply a saved look in one click; save your own; make one the default for new Bar Lists; copy or paste a style code to share it (send it to have it added as a team preset for everyone).
 
 ## How it works
 
@@ -30,6 +31,7 @@ Ranked bars for one dimension, e.g. Salary Bucket, Simah Score or Employment, sh
 - **Many bars:** the list scrolls instead of squeezing the bars.
 
 ## Version history
+- **1.2.0**: *Presets* tab. Save the current look (bar shape and height, track, colors, labels, text, background) as a named preset and apply it to any Bar List. Pick one as the default for new Bar Lists on this computer. Copy / paste a style code to share a look; team presets are built in.
 - **1.1.0**: Bar height in pixels (Thickness → Custom height). Fill-up track = total of all bars: each bar fills its share of the total (e.g. each loan status of all applications). Two-color gradient bars, across the full width or along each bar.
 - **1.0.3**: The clicked bar keeps its color with a bold label and the rest turn grey, also on the first click on Tableau Server (no more "Updating…" fade over your own click). "Loading…" placeholder while the dashboard opens.
 - **1.0.2**: On Tableau Server, a slow first filter action no longer blanks the bars: they stay visible (faded, with "Updating…") until the new data arrives.
