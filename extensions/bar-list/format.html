@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="ext-version" content="1.2.0" />
+  <meta name="ext-version" content="1.3.0" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Format Bar List</title>
-  <link rel="stylesheet" href="./format.css?v=1.2.0" />
-  <script src="../../shared/lib/tableau.extensions.1.latest.min.js?v=1.2.0"></script>
-  <script src="./kpi-formula.js?v=1.2.0"></script>
-  <script src="./format.js?v=1.2.0" defer></script>
+  <link rel="stylesheet" href="./format.css?v=1.3.0" />
+  <script src="../../shared/lib/tableau.extensions.1.latest.min.js?v=1.3.0"></script>
+  <script src="./kpi-formula.js?v=1.3.0"></script>
+  <script src="./format.js?v=1.3.0" defer></script>
 </head>
 <body>
   <form id="form" class="fx" autocomplete="off">
@@ -52,6 +52,23 @@
           <label class="fx-check"><input type="checkbox" name="others" /> Group the rest as "Others" <small>(with Top N)</small></label>
           <label class="fx-check"><input type="checkbox" name="nullLast" /> Null / Not Available last, in grey <small>(never takes a Top N place)</small></label>
           <p class="fx-hint">Top N ranks by the KPI shown, so switching KPI can change the top bars.</p>
+        </section>
+        <section>
+          <h2>Drill-down</h2>
+          <p class="fx-hint" id="drillHint"></p>
+          <div class="fx-grid">
+            <label class="fx-field">At the start
+              <select name="expandLevel"><option value="0">Only the first level</option><option value="1">Second level open</option><option value="2">Third level open</option><option value="9">Everything open</option></select>
+            </label>
+            <label class="fx-field">Inside an opened bar
+              <select name="childTopN"><option value="0">All sub-bars</option><option value="3">Top 3</option><option value="5">Top 5</option><option value="8">Top 8</option><option value="10">Top 10</option><option value="15">Top 15</option></select>
+            </label>
+            <label class="fx-field">Sub-bars show %
+              <select name="childPct"><option value="parent">of their parent bar</option><option value="total">of the total</option></select>
+            </label>
+          </div>
+          <label class="fx-check"><input type="checkbox" name="expandButtons" /> Expand all / Collapse buttons</label>
+          <label class="fx-check"><input type="checkbox" name="subShade" /> Sub-bars a lighter shade of their parent</label>
         </section>
         <section>
           <h2>Labels</h2>

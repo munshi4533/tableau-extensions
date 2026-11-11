@@ -15,7 +15,7 @@
   // ---- presets: the look only (never KPIs, formulas, Top N, sort or title text)
   const STYLE_KEYS = ['thickness', 'barSize', 'corners', 'track', 'colorMode', 'barColor', 'barColor2', 'gradientSpan',
     'labelContent', 'labelPos', 'labelAlign', 'labelSize', 'valueSize', 'valueWeight', 'labelColor', 'valueColor',
-    'titleSize', 'titleAlign', 'showTitle', 'nullLast', 'background', 'bgColor'];
+    'titleSize', 'titleAlign', 'showTitle', 'nullLast', 'background', 'bgColor', 'subShade'];
   // Team presets: built into the extension, the same for everyone (send a style code to add one)
   const TEAM_PRESETS = [
     { name: 'Affordability (amber, thin)', style: { thickness: 'thin', corners: 'pill', track: 'none', colorMode: 'single', barColor: '#f2b01e', labelContent: 'both', labelPos: 'auto', nullLast: false } },
@@ -82,7 +82,7 @@
     });
   }
 
-  const NUM = new Set(['topN', 'labelSize', 'valueSize', 'titleSize', 'barSize']);
+  const NUM = new Set(['topN', 'expandLevel', 'childTopN', 'labelSize', 'valueSize', 'titleSize', 'barSize']);
 
   const verMeta = document.querySelector('meta[name="ext-version"]');
   if (verMeta) { const h = document.querySelector('.fx-top p'); if (h) h.textContent += ` · v${verMeta.content}`; }
@@ -136,6 +136,9 @@
   }
   function refresh () {
     $('bgColorField').hidden = cfg.background !== 'custom';
+    $('drillHint').innerHTML = (ctx.levels || 1) > 1
+      ? `${ctx.levels} levels on Category. Viewers open a bar with <b>+</b> or a <b>double-click</b>; a click still filters the dashboard.`
+      : 'Put a second dimension on <b>Category</b> (e.g. Category, then Sub-Category) to let viewers open a bar into its sub-bars.';
     $('barSizeField').hidden = cfg.thickness !== 'custom';
     $('barColorField').hidden = cfg.colorMode === 'category';
     $('barColor2Field').hidden = $('gradientSpanField').hidden = cfg.colorMode !== 'gradient';

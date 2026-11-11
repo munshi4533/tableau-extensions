@@ -1,7 +1,8 @@
 /* Bar List – Tableau Viz Extension
  * Ranked horizontal bars for one dimension: value and % of total, Top N + Others, several KPIs
  * (switch buttons; calculated KPIs from a formula), optional Breakdown (segments) and Target.
- * Encodings: category (1), measures (up to 10), breakdown (1), target (1). Tooltip / Detail tiles add tooltip rows.
+ * Encodings: category (up to 4: drill-down Category → Sub-Category …), measures (up to 10), breakdown (1), target (1).
+ * Tooltip / Detail tiles add tooltip rows.
  */
 /* global d3, tableau, ExtMenu, KpiFormula */
 'use strict';
@@ -20,6 +21,11 @@
     topN: 0, // 0 = all
     others: true, // group the rest as "Others"
     nullLast: true, // Null / Not Available at the bottom, in grey
+    expandLevel: 0, // drill-down (several dimensions on Category): levels open at the start, 0 = only the first level
+    childTopN: 0, // Top N inside an opened bar (0 = all)
+    childPct: 'parent', // sub-bars show % of: parent | total
+    expandButtons: true, // Expand all / Collapse all buttons in the header
+    subShade: true, // sub-bars a lighter shade of their parent's color
     labelContent: 'both', // both (value | %) | value | pct | none
     labelPos: 'auto', // auto (right of the bar, under it when it does not fit) | end | below | inside
     thickness: 'thin', // thin | normal | thick | custom
@@ -57,7 +63,7 @@
     try { worksheet.addEventListener(tableau.TableauEventType.FilterChanged, refresh); } catch (e) { /* n/a */ }
     watchParameters();
     // click an empty spot to clear the selection
-    document.addEventListener('click', (e) => { if (selected && !e.target.closest('.bl-row, .bl-switch')) clearSelection(); });
+    document.addEventListener('click', (e) => { if (selected && !e.target.closest('.bl-row, .bl-switch, .bl-tree')) clearSelection(); });
     try { tableau.extensions.settings.addEventListener(tableau.TableauEventType.SettingsChanged, () => { loadSettings(); rebuild(); render(); }); } catch (e) { /* n/a */ }
     const ro = new ResizeObserver(debounce(() => { const c = $('rows'); if (model && (c.clientWidth !== drawn.w || c.clientHeight !== drawn.h)) render(); }, 60));
     ro.observe(document.body); ro.observe($('rows'));
@@ -147,46 +153,57 @@
   }
 
   // ================================================================ model
+  const SEP = '\u001f'; // joins the names on a drill-down path (Category › Sub-Category …)
   function buildModel ({ rows, columns }, enc) {
-    const catF = enc.category && enc.category[0];
+    const catFs = enc.category || [];
     const mF = enc.measures || [];
-    if (!catF || !mF.length) return { empty: true, needCat: !catF, needMeasures: !mF.length };
+    if (!catFs.length || !mF.length) return { empty: true, needCat: !catFs.length, needMeasures: !mF.length };
     const names = columns.map((c) => c.fieldName);
     const taken = new Set();
     const key = (f) => { if (!f) return null; const k = resolve(f.name, names.filter((n) => !taken.has(n))) || resolve(f.name, names); if (k) taken.add(k); return k; };
-    const catK = key(catF);
+    const catKs = catFs.map(key).filter(Boolean);
     const brF = enc.breakdown && enc.breakdown[0]; const brK = key(brF);
     const tgF = enc.target && enc.target[0]; const tgK = key(tgF);
     const measures = mF.map(key).filter(Boolean).map((k, i) => ({ key: k, name: cleanName(k), index: i, sample: null }));
-    const used = new Set([catK, brK, tgK, ...measures.map((m) => m.key)]);
+    const used = new Set([...catKs, brK, tgK, ...measures.map((m) => m.key)]);
     const extraKeys = names.filter((n) => !used.has(n));
 
-    const cats = new Map(); // name -> { name, order, vals: {key: sum}, target, segs: Map, tuples: [], extras }
+    // a tree: Category → Sub-Category → … ; every node sums the rows underneath it
+    // node = { name, path, depth, order, vals: {key: sum}, target, segs: Map, tuples: [], extras, children: Map }
+    const root = new Map();
     const segNames = [];
+    const node = (map, name, path, depth) => {
+      let c = map.get(name);
+      if (!c) { c = { name, path, depth, order: map.size, vals: {}, target: null, segs: new Map(), tuples: [], extras: new Map(), children: new Map() }; map.set(name, c); }
+      return c;
+    };
     rows.forEach((r) => {
-      const name = formatted(r[catK]);
-      let c = cats.get(name);
-      if (!c) { c = { name, order: cats.size, vals: {}, target: null, segs: new Map(), tuples: [], extras: new Map() }; cats.set(name, c); }
-      c.tuples.push(r.__tupleId);
-      for (const m of measures) {
-        const dv = r[m.key]; const y = toNumber(dv);
-        if (y === null) continue;
-        c.vals[m.key] = (c.vals[m.key] || 0) + y;
-        if (dv.formattedValue && (!m.sample || Math.abs(y) > Math.abs(m.sample.y))) m.sample = { text: dv.formattedValue, y };
-      }
-      if (tgK) { const t = toNumber(r[tgK]); if (t !== null) c.target = (c.target || 0) + t; }
-      if (brK) {
-        const s = formatted(r[brK]);
-        if (!segNames.includes(s)) segNames.push(s);
-        const seg = c.segs.get(s) || {};
-        for (const m of measures) { const y = toNumber(r[m.key]); if (y !== null) seg[m.key] = (seg[m.key] || 0) + y; }
-        c.segs.set(s, seg);
-      }
-      for (const k of extraKeys) { const dv = r[k]; if (dv && !c.extras.has(k)) c.extras.set(k, formatted(dv)); }
+      const nums = measures.map((m) => toNumber(r[m.key]));
+      measures.forEach((m, i) => { const dv = r[m.key]; const y = nums[i]; if (y !== null && dv.formattedValue && (!m.sample || Math.abs(y) > Math.abs(m.sample.y))) m.sample = { text: dv.formattedValue, y }; });
+      const t = tgK ? toNumber(r[tgK]) : null;
+      const s = brK ? formatted(r[brK]) : null;
+      if (brK && !segNames.includes(s)) segNames.push(s);
+      let map = root; let path = '';
+      catKs.forEach((ck, depth) => {
+        const name = formatted(r[ck]);
+        path = depth ? path + SEP + name : name;
+        const c = node(map, name, path, depth);
+        c.tuples.push(r.__tupleId);
+        measures.forEach((m, i) => { if (nums[i] !== null) c.vals[m.key] = (c.vals[m.key] || 0) + nums[i]; });
+        if (t !== null) c.target = (c.target || 0) + t;
+        if (brK) { const seg = c.segs.get(s) || {}; measures.forEach((m, i) => { if (nums[i] !== null) seg[m.key] = (seg[m.key] || 0) + nums[i]; }); c.segs.set(s, seg); }
+        if (depth === catKs.length - 1) for (const k of extraKeys) { const dv = r[k]; if (dv && !c.extras.has(k)) c.extras.set(k, formatted(dv)); }
+        map = c.children;
+      });
     });
+    const finish = (map) => [...map.values()].map((c) => { c.kids = finish(c.children); delete c.children; return c; });
     measures.forEach((m) => { m.unit = m.sample ? detectUnit(m.sample.text, m.sample.y) : detectUnit(null); });
-    return { catName: cleanName(catF.name), measures, cats: [...cats.values()], segNames, hasBreakdown: !!brK, hasTarget: !!tgK, extraKeys };
+    return {
+      catName: cleanName(catFs[0].name), levelNames: catKs.map(cleanName), levels: catKs.length,
+      measures, cats: finish(root), segNames, hasBreakdown: !!brK, hasTarget: !!tgK, extraKeys
+    };
   }
+  function eachNode (list, fn) { list.forEach((c) => { fn(c); if (c.kids) eachNode(c.kids, fn); }); }
 
   // ---------------------------------------------------------------- KPIs
   function kpiList () {
@@ -236,15 +253,14 @@
 
   // ---------------------------------------------------------------- rows to draw
   const isNull = (n) => NULL_NAMES.includes(String(n).trim().toLowerCase());
-  function rowsFor (k) {
-    const sum = (list, field) => { const o = {}; list.forEach((c) => { for (const key in c[field]) o[key] = (o[key] || 0) + c[field][key]; }); return o; };
-    let list = model.cats.map((c) => ({ ...c, v: kpiValue(k, c.vals), isNull: isNull(c.name) }));
-    const total = kpiValue(k, sum(model.cats, 'vals'));
+  const sumField = (list, field) => { const o = {}; list.forEach((c) => { for (const key in c[field]) o[key] = (o[key] || 0) + c[field][key]; }); return o; };
+  // one level: value, Top N (+ Others), sort, Null last
+  function rankLevel (nodes, k, n, parent) {
+    let list = nodes.map((c) => ({ ...c, v: kpiValue(k, c.vals), isNull: isNull(c.name), parent }));
     const byVal = (a, b) => (b.v ?? -Infinity) - (a.v ?? -Infinity);
     // Top N by value (Null / Not Available never takes a Top N place when it goes last)
     let rest = [];
-    const n = +cfg.topN || 0;
-    if (n > 0) {
+    if (n > 0 && list.length > n + (cfg.others ? 1 : 0)) { // "Others (1)" would just be that one bar
       const ranked = list.filter((c) => !(cfg.nullLast && c.isNull)).sort(byVal);
       const keep = new Set(ranked.slice(0, n));
       rest = ranked.slice(n);
@@ -255,14 +271,53 @@
     else if (cfg.sort === 'alpha') list.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
     else list.sort((a, b) => a.order - b.order);
     if (rest.length && cfg.others) {
-      const vals = sum(rest, 'vals');
+      const vals = sumField(rest, 'vals');
       const segs = new Map();
       rest.forEach((c) => c.segs.forEach((sv, s) => { const o = segs.get(s) || {}; for (const key in sv) o[key] = (o[key] || 0) + sv[key]; segs.set(s, o); }));
       const tg = rest.some((c) => c.target !== null) ? d3.sum(rest, (c) => c.target || 0) : null;
-      list.push({ name: `Others (${rest.length})`, others: true, vals, segs, target: tg, v: kpiValue(k, vals), tuples: [].concat(...rest.map((c) => c.tuples)), extras: new Map() });
+      const name = `Others (${rest.length})`;
+      const depth = parent ? parent.depth + 1 : 0;
+      list.push({ name, path: parent ? parent.path + SEP + '\u0000others' : '\u0000others', depth, others: true, vals, segs, target: tg, v: kpiValue(k, vals), tuples: [].concat(...rest.map((c) => c.tuples)), extras: new Map(), kids: [], parent, hidden: rest.length });
     }
     if (cfg.nullLast) list = [...list.filter((c) => !c.isNull), ...list.filter((c) => c.isNull)];
-    return { list, total };
+    return list;
+  }
+  // the rows on screen: the first level, plus the children of every opened bar right under it
+  function rowsFor (k) {
+    const total = kpiValue(k, sumField(model.cats, 'vals'));
+    const out = [];
+    const walk = (nodes, parent) => {
+      rankLevel(nodes, k, parent ? (+cfg.childTopN || 0) : (+cfg.topN || 0), parent).forEach((r) => {
+        // a bar opens when it has sub-bars (not just itself again, like Not Available › Not Available)
+        r.hasKids = !r.others && r.kids && r.kids.length > 0 && !(r.kids.length === 1 && r.kids[0].name === r.name && !r.kids[0].kids.length);
+        out.push(r);
+        if (r.hasKids && expanded.has(r.path)) walk(r.kids, r);
+      });
+    };
+    walk(model.cats, null);
+    return { list: out, total };
+  }
+
+  // drill-down: which bars are open (kept while the data refreshes; reset when the fields or the start level change)
+  const expanded = new Set();
+  let expandKey = '';
+  function syncExpanded () {
+    if (!model || !model.cats) return;
+    const key = model.levelNames.join('|') + '#' + (+cfg.expandLevel || 0);
+    if (key === expandKey) return;
+    expandKey = key; expanded.clear();
+    const lvl = +cfg.expandLevel || 0;
+    if (lvl > 0) eachNode(model.cats, (c) => { if (c.depth < lvl && c.kids.length) expanded.add(c.path); });
+  }
+  function toggleNode (r) {
+    if (!r.hasKids) return;
+    if (expanded.has(r.path)) { for (const p of [...expanded]) if (p === r.path || p.startsWith(r.path + SEP)) expanded.delete(p); } else expanded.add(r.path);
+    render();
+  }
+  function expandAll (open) {
+    expanded.clear();
+    if (open) eachNode(model.cats, (c) => { if (c.kids.length) expanded.add(c.path); });
+    render();
   }
 
   // ================================================================ render
@@ -282,17 +337,22 @@
     const k = currentKpi();
     if (k.kind === 'calc' && formulaProblem(k.c.formula)) return showEmpty('<b>' + esc(kpiName(k)) + '</b>: ' + esc(formulaProblem(k.c.formula)));
     $('empty').hidden = true;
+    syncExpanded();
     renderHeader(k);
     renderLegend();
 
     const { list, total } = rowsFor(k);
+    const tree = model.levels > 1;
+    const INDENT = 14; const TOG = tree ? 16 : 0;
     if (!list.length) return showEmpty('<b>No data.</b>');
     const c = kcfg(k); const unit = kpiUnit(k);
     const fmt = (x) => fmtValue(x, c, unit);
     const share = showsShare(k) && total;
-    const pctText = (v) => (share && v !== null ? fmtPct(v / total) : '');
+    // sub-bars: % of their parent bar (or of the total)
+    const pctOf = (r) => (r.parent && cfg.childPct !== 'total' ? r.parent.v : total);
+    const pctText = (r) => { const d = pctOf(r); return share && r.v !== null && d ? fmtPct(r.v / d) : ''; };
     const label = (r) => {
-      const val = fmt(r.v); const p = pctText(r.v);
+      const val = fmt(r.v); const p = pctText(r);
       if (cfg.labelContent === 'none') return '';
       if (cfg.labelContent === 'value') return val;
       if (cfg.labelContent === 'pct') return p || val;
@@ -308,7 +368,10 @@
     const font = (size, w) => `${w} ${size}px -apple-system, "Segoe UI", Roboto, Arial, sans-serif`;
     const tw = (t, f) => { ctx.font = f; return ctx.measureText(t).width; };
     const labF = font(+cfg.labelSize || 11, 400); const valF = font(+cfg.valueSize || 11, cfg.valueWeight || 400);
-    const labW = Math.min(W * 0.38, Math.max(40, d3.max(list, (r) => tw(r.name, labF)) + 10));
+    // name column: wide enough for every level (measured over the whole tree, so opening a bar does not shift the bars)
+    let nameW = d3.max(list, (r) => tw(r.name, labF) + r.depth * INDENT);
+    if (tree) eachNode(model.cats, (c) => { if (c.depth <= Math.max(1, +cfg.expandLevel || 0)) nameW = Math.max(nameW, tw(c.name, labF) + c.depth * INDENT); });
+    const labW = Math.min(W * 0.38, Math.max(40, nameW + TOG + 10));
     const areaW = Math.max(40, W - labW - 8);
     const valW = d3.max(list, (r) => tw(label(r), valF)) + 8;
     // row height shares the zone; bar thickness follows the chosen style
@@ -326,11 +389,11 @@
     box.style.justifyContent = list.length * rowH > H + 1 ? 'flex-start' : ''; // many bars: scroll instead of squeezing
     list.forEach((r, i) => {
       const el = document.createElement('div');
-      el.className = 'bl-row' + (r.isNull && cfg.nullLast ? ' is-null' : '') + (r.others ? ' is-others' : '');
-      el.dataset.name = r.name;
+      el.className = 'bl-row' + (r.isNull && cfg.nullLast ? ' is-null' : '') + (r.others ? ' is-others' : '') + (r.depth ? ' is-sub' : '') + (r.hasKids ? ' has-kids' : '') + (expanded.has(r.path) ? ' is-open' : '');
+      el.dataset.path = r.path;
       el.style.height = rowH + 'px';
       el.style.gridTemplateColumns = `${labW}px 1fr`;
-      const color = barColor(r, i, list, maxV);
+      const color = r.color = barColor(r, i, list, maxV);
       let w = r.v === null ? 0 : Math.max(r.v > 0 ? Math.min(th, 3) : 0, (Math.max(0, r.v) / maxV) * scaleW);
       // auto: right of the bar when it fits, otherwise under the bar's end (like a long "Not Available" bar)
       let where = pos;
@@ -350,11 +413,15 @@
       const tick = r.target ? `<b class="bl-target" style="left:${(r.target / maxV) * scaleW}px;height:${th + 6}px"></b>` : '';
       const txt = label(r);
       const lab = txt ? `<span class="bl-val ${where}" style="${where === 'end' ? `left:${reach + 6}px` : where === 'below' ? `left:${Math.max(0, w - tw(txt, valF))}px;top:calc(50% + ${th / 2 + 2}px)` : 'left:6px'}">${esc(txt)}</span>` : '';
-      el.innerHTML = `<div class="bl-lab ${cfg.labelAlign === 'right' ? 'right' : ''}" title="${esc(r.name)}">${esc(r.name)}</div>` +
+      const tog = tree ? `<span class="bl-tog" style="margin-left:${r.depth * INDENT}px">${r.hasKids ? (expanded.has(r.path) ? '−' : '+') : ''}</span>` : '';
+      el.innerHTML = `<div class="bl-lab ${cfg.labelAlign === 'right' ? 'right' : ''}" title="${esc(r.name)}">${tog}<span class="bl-name">${esc(r.name)}</span></div>` +
         `<div class="bl-area">${trackW ? `<div class="bl-track" style="width:${trackW}px;height:${th}px;border-radius:${radius}px"></div>` : ''}${bar}${tick}${lab}</div>`;
       el.addEventListener('mousemove', (e) => showRowTip(e, r, k, total, fmt, share));
       el.addEventListener('mouseleave', hideTooltip);
-      el.addEventListener('click', (e) => select(r, e));
+      el.addEventListener('click', (e) => {
+        if (e.target.closest('.bl-tog')) { e.stopPropagation(); cancelPending(); toggleNode(r); return; }
+        onRowClick(r, e);
+      });
       box.appendChild(el);
     });
     lastRows = list;
@@ -365,8 +432,10 @@
     if (r.isNull && cfg.nullLast) return NULL_COLOR;
     if (r.others) return '#a5a49e';
     const base = cfg.barColor || PALETTE[0];
-    if (cfg.colorMode === 'category') return PALETTE[i % PALETTE.length];
-    if (cfg.colorMode === 'top') { const top = list.filter((x) => !x.isNull && !x.others).reduce((a, b) => ((b.v ?? -Infinity) > (a.v ?? -Infinity) ? b : a), list[0]); return r === top ? base : mix(base, '#ffffff', 0.55); }
+    // sub-bars: their parent's color, a shade lighter (Darker-for-higher keeps working on its own)
+    if (r.parent && r.parent.color && cfg.colorMode !== 'scale') return cfg.subShade ? mix(r.parent.color, '#ffffff', 0.3) : r.parent.color;
+    if (cfg.colorMode === 'category') return PALETTE[list.filter((x) => !x.depth).indexOf(r) % PALETTE.length];
+    if (cfg.colorMode === 'top') { const top = list.filter((x) => !x.depth && !x.isNull && !x.others).reduce((a, b) => ((b.v ?? -Infinity) > (a.v ?? -Infinity) ? b : a), list[0]); return r === top ? base : mix(base, '#ffffff', 0.55); }
     if (cfg.colorMode === 'scale') return mix(base, '#ffffff', 0.7 * (1 - Math.max(0, r.v || 0) / maxV));
     if (cfg.colorMode === 'gradient') return base;
     return base;
@@ -382,8 +451,16 @@
       sw.onclick = (e) => { const b = e.target.closest('[data-k]'); if (!b) return; viewerKpi = b.dataset.k; render(); };
     }
     $('title').textContent = cfg.showTitle ? (cfg.title || model.catName) : '';
-    $('header').classList.toggle('center', cfg.titleAlign === 'center' && !showSw);
-    $('header').hidden = !showSw && !cfg.showTitle;
+    // drill-down: Expand all / Collapse all
+    const tb = $('treeBtns'); const showTree = model.levels > 1 && cfg.expandButtons;
+    tb.hidden = !showTree;
+    if (showTree) {
+      const anyOpen = expanded.size > 0;
+      tb.innerHTML = `<button type="button" data-t="1" title="Open every bar to its ${esc(model.levelNames.slice(1).join(' / '))}"><span>+</span>Expand all</button><button type="button" data-t="0" ${anyOpen ? '' : 'disabled'}><span>−</span>Collapse</button>`;
+      tb.onclick = (e) => { const b = e.target.closest('[data-t]'); if (b) { e.stopPropagation(); expandAll(b.dataset.t === '1'); } };
+    }
+    $('header').classList.toggle('center', cfg.titleAlign === 'center' && !showSw && !showTree);
+    $('header').hidden = !showSw && !cfg.showTitle && !showTree;
   }
   function renderLegend () {
     const lg = $('legend');
@@ -393,15 +470,18 @@
 
   function showRowTip (e, r, k, total, fmt, share) {
     const rows = [[kpiName(k), fmt(r.v), true]];
+    if (share && r.v !== null && r.parent && r.parent.v) rows.push([`% of ${r.parent.name}`, fmtPct(r.v / r.parent.v)]);
     if (share && r.v !== null) rows.push(['% of total', fmtPct(r.v / total)]);
     for (const x of kpiList()) if (x.id !== k.id) rows.push([kpiName(x), fmtValue(kpiValue(x, r.vals), kcfg(x), kpiUnit(x))]);
     if (r.target) rows.push(['Target', `${fmt(r.target)} · ${Math.round((r.v / r.target) * 100)}%`]);
-    let html = `<div class="bl-tt-head">${esc(r.name)}</div>` + rows.map(([a, b, big]) => `<div class="bl-tt-row"><span>${esc(a)}</span><b class="${big ? 'big' : ''}">${esc(b)}</b></div>`).join('');
+    const trail = []; for (let p = r.parent; p; p = p.parent) trail.unshift(p.name);
+    let html = `<div class="bl-tt-head">${trail.length ? `<small>${esc(trail.join(' › '))} ›</small> ` : ''}${esc(r.name)}</div>` + rows.map(([a, b, big]) => `<div class="bl-tt-row"><span>${esc(a)}</span><b class="${big ? 'big' : ''}">${esc(b)}</b></div>`).join('');
     const seg = e.target.closest && e.target.closest('[data-seg]');
     if (model.hasBreakdown) html += '<div class="bl-tt-sub">' + model.segNames.map((s, i) => { const sv = kpiValue(k, r.segs.get(s) || {}); return sv === null || sv === undefined ? '' : `<div class="bl-tt-row${seg && seg.dataset.seg === s ? ' hl' : ''}"><span><i style="background:${PALETTE[i % PALETTE.length]}"></i>${esc(s)}</span><b>${esc(fmt(sv))}${r.v ? ' · ' + fmtPct(sv / r.v) : ''}</b></div>`; }).join('') + '</div>';
     const ex = [...(r.extras || new Map()).entries()].filter(([, v]) => v !== '');
     if (ex.length) html += '<div class="bl-tt-sub">' + ex.map(([kk, v]) => `<div class="bl-tt-row"><span>${esc(cleanName(kk))}</span><b>${esc(v)}</b></div>`).join('') + '</div>';
-    if (r.others) html += '<div class="bl-tt-sub">Everything outside the Top ' + (+cfg.topN) + '</div>';
+    if (r.others) html += '<div class="bl-tt-sub">Everything outside the Top ' + (r.parent ? +cfg.childTopN : +cfg.topN) + '</div>';
+    if (r.hasKids) html += `<div class="bl-tt-sub">${expanded.has(r.path) ? 'Double-click or − to close' : `Double-click or + to open its ${esc(model.levelNames[r.depth + 1] || 'details')}`}</div>`;
     const tt = $('tooltip'); tt.innerHTML = html; tt.hidden = false;
     const b = tt.getBoundingClientRect();
     let x = e.clientX + 14; let y = e.clientY + 14;
@@ -410,16 +490,26 @@
     tt.style.left = Math.max(4, x) + 'px'; tt.style.top = y + 'px';
   }
   // click a bar to select it in Tableau (dashboard filter / highlight actions); Cmd / Ctrl + click adds;
-  // the same bar again (or an empty spot) clears
-  let selected = null; // Set of category names
+  // the same bar again (or an empty spot) clears. A sub-bar selects its category + sub-category, a parent its whole group.
+  // Bars that open (drill-down): a double-click opens / closes them, so their single click waits a moment.
+  let selected = null; // Set of paths
   let lastRows = [];
+  let pending = null; // { r, timer } a click waiting to see if it becomes a double-click
+  function cancelPending () { if (pending) { clearTimeout(pending.timer); pending = null; } }
+  function onRowClick (r, e) {
+    if (!r.hasKids) { cancelPending(); select(r, e); return; }
+    if (pending && pending.r.path === r.path) { cancelPending(); toggleNode(r); return; }
+    cancelPending();
+    const ev = { ctrlKey: e.ctrlKey, metaKey: e.metaKey, pageX: e.pageX, pageY: e.pageY };
+    pending = { r, timer: setTimeout(() => { pending = null; select(r, ev); }, 260) };
+  }
   function select (r, e) {
     const add = e.ctrlKey || e.metaKey;
     let next;
-    if (add && selected) { next = new Set(selected); if (next.has(r.name)) next.delete(r.name); else next.add(r.name); } else if (selected && selected.size === 1 && selected.has(r.name)) next = new Set(); else next = new Set([r.name]);
+    if (add && selected) { next = new Set(selected); if (next.has(r.path)) next.delete(r.path); else next.add(r.path); } else if (selected && selected.size === 1 && selected.has(r.path)) next = new Set(); else next = new Set([r.path]);
     if (!next.size) { clearSelection(); return; }
     selected = next;
-    const ids = [].concat(...lastRows.filter((x) => selected.has(x.name)).map((x) => x.tuples));
+    const ids = [...new Set([].concat(...lastRows.filter((x) => selected.has(x.path)).map((x) => x.tuples)))];
     selfSelectAt = Date.now();
     worksheet.selectTuplesAsync(ids, tableau.SelectOptions.Simple, { tooltipAnchorPoint: { x: e.pageX, y: e.pageY } }).catch((er) => console.warn('Could not select', er));
     markSelection();
@@ -431,8 +521,10 @@
     worksheet.selectTuplesAsync([], tableau.SelectOptions.Simple, { tooltipAnchorPoint: { x: 0, y: 0 } }).catch(() => {});
     markSelection();
   }
+  // a selected parent keeps its open sub-bars in color too
+  const isPicked = (path) => [...selected].some((s) => path === s || path.startsWith(s + SEP));
   function markSelection () {
-    document.querySelectorAll('.bl-row').forEach((x) => x.classList.toggle('dim', !!selected && !selected.has(x.dataset.name)));
+    document.querySelectorAll('.bl-row').forEach((x) => x.classList.toggle('dim', !!selected && !isPicked(x.dataset.path)));
     document.body.classList.toggle('has-selection', !!selected);
   }
 
@@ -490,7 +582,7 @@
   }
   async function openFormatDialog () {
     const url = new URL('format.html' + window.location.search, window.location.href).href;
-    const ctx = model && model.measures ? { measures: model.measures.map((m) => ({ key: m.key, name: m.name })), hasBreakdown: model.hasBreakdown, hasTarget: model.hasTarget } : { measures: [] };
+    const ctx = model && model.measures ? { measures: model.measures.map((m) => ({ key: m.key, name: m.name })), hasBreakdown: model.hasBreakdown, hasTarget: model.hasTarget, levels: model.levels || 1 } : { measures: [] };
     try { await tableau.extensions.ui.displayDialogAsync(url, JSON.stringify({ ctx, defaults: DEFAULTS, kpi: KPI }), { width: 560, height: 760 }); } catch (e) { if (!(tableau.ErrorCodes && e.errorCode === tableau.ErrorCodes.DialogClosedByUser)) console.error(e); }
     loadSettings(); rebuild(); render();
   }

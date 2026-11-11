@@ -37,3 +37,19 @@ MockTableau.scenario('status', (M) => {
   const data = [['Rejected', 362762], ['Originating', 110300], ['Contract Agreed', 6000], ['Commodity Buy Agreed', 14000], ['Contract Signed', 9000], ['Commodity Ownership Transferred', 2000], ['Commodity Sell Agreed', 76900], ['Cancelled', 22000]].map(([n, c]) => [M.dv(n, n, n), M.dv(c, c, M.fmtInt(c))]);
   return { columns, data, encodings: [{ id: 'category', field: M.field(columns[0]) }, { id: 'measures', field: M.field(columns[1]) }] };
 });
+
+MockTableau.scenario('drill', (M) => {
+  // drill-down: Product → Sub-Product (two dimensions on Category), with a loan amount
+  const columns = ['Product', 'Sub Product', 'CNT(Customers)', 'SUM(Loan Amount)'];
+  const tree = {
+    'Personal Finance': [['Salary Transfer', 62100], ['Non-Salary', 18400], ['Top-up', 9300], ['Refinance', 7200], ['Pension', 2900]],
+    'Credit Card': [['Classic', 41800], ['Gold', 21900], ['Platinum', 8700], ['Signature', 1900]],
+    'BNPL': [['Electronics', 27400], ['Travel', 6200], ['Furniture', 4100]],
+    'Auto Lease': [['New Car', 9800], ['Used Car', 4300]],
+    'Home Finance': [['Ready Home', 3100], ['Off-Plan', 900], ['Self Build', 600]],
+    'Not Available': [['Not Available', 5200]]
+  };
+  const data = [];
+  Object.entries(tree).forEach(([p, subs], pi) => subs.forEach(([s, c], si) => { const a = c * (20000 + pi * 9000 + si * 3000); data.push([M.dv(p, p, p), M.dv(s, s, s), M.dv(c, c, M.fmtInt(c)), M.dv(a, a, Math.round(a / 1e6).toLocaleString('en-US') + ' Mn')]); }));
+  return { columns, data, encodings: [{ id: 'category', field: M.field(columns[0]) }, { id: 'category', field: M.field(columns[1]) }, { id: 'measures', field: M.field(columns[2]) }, { id: 'measures', field: M.field(columns[3]) }] };
+});

@@ -5,7 +5,7 @@ Ranked bars for one dimension, e.g. Salary Bucket, Simah Score or Employment, sh
 ## Set up
 
 1. Marks card → **Viz Extensions** → Bar List.
-2. **Category:** the dimension. You get one bar per value.
+2. **Category:** the dimension. You get one bar per value. Add up to 4 dimensions (e.g. Category, then Sub-Category) to drill down.
 3. **Measures:** one or more KPIs, e.g. `CNT(Customers)`, `SUM(Loan Amount)`. With several, viewers switch between them with buttons.
 4. Optional:
    - **Breakdown:** a second dimension that splits each bar into colored segments.
@@ -16,6 +16,7 @@ Ranked bars for one dimension, e.g. Salary Bucket, Simah Score or Employment, sh
    - **Bars:**
      - Sort (high → low, low → high, A → Z, as in Tableau).
      - Top N + "Others"; Null / Not Available last in grey.
+     - Drill-down: levels open at the start, Top N inside an opened bar, % of parent or of total, Expand all / Collapse buttons.
      - Labels: content and position.
      - Bar shape: thickness and corners, plus a fill-up track.
      - Colors.
@@ -28,9 +29,11 @@ Ranked bars for one dimension, e.g. Salary Bucket, Simah Score or Employment, sh
 - **Calculated KPIs** are computed per bar from the measures summed for that bar (and for Others), so Avg Loan for Others is total amount ÷ total customers of those bars.
 - **Top N** ranks by the KPI shown. Null / Not Available never takes a Top N place when "last, in grey" is on.
 - **Click a bar** to select it in Tableau for dashboard filter or highlight actions. Cmd / Ctrl + click adds more bars; clicking the same bar again, or an empty spot, clears the selection. "Others" selects all bars it contains.
+- **Drill-down:** with several dimensions on Category, a bar with sub-bars gets a **+**. Click it (or double-click the bar) to open its sub-bars underneath, indented; **−** closes them. Sub-bars show "value | % of parent". A single click on a sub-bar filters the dashboard on that category + sub-category; on a parent, on the whole category. Parent values are the sum of their sub-bars, which is right for counts and sums; COUNTD and averages don't add up across sub-bars, so use a calculated KPI for ratios (e.g. `[Loan Amount] / [Customers]`).
 - **Many bars:** the list scrolls instead of squeezing the bars.
 
 ## Version history
+- **1.3.0**: Drill-down. Put Category and Sub-Category (up to 4 levels) on the Category shelf; + or a double-click opens a bar into its sub-bars. Expand all / Collapse buttons, Top N inside an opened bar, % of parent. "Others (1)" no longer appears: that one bar is just shown.
 - **1.2.0**: *Presets* tab. Save the current look (bar shape and height, track, colors, labels, text, background) as a named preset and apply it to any Bar List. Pick one as the default for new Bar Lists on this computer. Copy / paste a style code to share a look; team presets are built in.
 - **1.1.0**: Bar height in pixels (Thickness → Custom height). Fill-up track = total of all bars: each bar fills its share of the total (e.g. each loan status of all applications). Two-color gradient bars, across the full width or along each bar.
 - **1.0.3**: The clicked bar keeps its color with a bold label and the rest turn grey, also on the first click on Tableau Server (no more "Updating…" fade over your own click). "Loading…" placeholder while the dashboard opens.
