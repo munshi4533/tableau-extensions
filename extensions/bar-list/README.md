@@ -17,7 +17,7 @@ Ranked bars for one dimension, e.g. Salary Bucket, Simah Score or Employment, sh
      - Sort (high → low, low → high, A → Z, as in Tableau).
      - Top N + "Others"; Null / Not Available last in grey.
      - Drill-down: levels open at the start, Top N inside an opened bar, % of parent or of total, Expand all / Collapse buttons.
-     - Labels: content and position.
+     - Labels: content and position; long names wrap (or cut with …).
      - Bar shape: thickness and corners, plus a fill-up track.
      - Colors.
    - **Look:** title, text sizes and colors, background.
@@ -33,6 +33,7 @@ Ranked bars for one dimension, e.g. Salary Bucket, Simah Score or Employment, sh
 - **Many bars:** the list scrolls instead of squeezing the bars.
 
 ## Version history
+- **1.3.1**: A closed bar's tooltip lists its sub-categories (largest first, value · % of the bar). Long category names wrap onto up to 3 lines and the row grows to fit (Format → Bars → Labels → Long names: wrap, or one line cut with …).
 - **1.3.0**: Drill-down. Put Category and Sub-Category (up to 4 levels) on the Category shelf; + or a double-click opens a bar into its sub-bars. Expand all / Collapse buttons, Top N inside an opened bar, % of parent. "Others (1)" no longer appears: that one bar is just shown.
 - **1.2.0**: *Presets* tab. Save the current look (bar shape and height, track, colors, labels, text, background) as a named preset and apply it to any Bar List. Pick one as the default for new Bar Lists on this computer. Copy / paste a style code to share a look; team presets are built in.
 - **1.1.0**: Bar height in pixels (Thickness → Custom height). Fill-up track = total of all bars: each bar fills its share of the total (e.g. each loan status of all applications). Two-color gradient bars, across the full width or along each bar.

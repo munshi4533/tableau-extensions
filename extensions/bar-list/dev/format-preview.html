@@ -4,13 +4,13 @@
   <base href="../" />
   <!-- GENERATED preview (tools/build.py): sample data instead of Tableau -->
   <meta charset="utf-8" />
-  <meta name="ext-version" content="1.3.0" />
+  <meta name="ext-version" content="1.3.1" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Format Bar List (preview)</title>
-  <link rel="stylesheet" href="./format.css?v=1.3.0" />
+  <link rel="stylesheet" href="./format.css?v=1.3.1" />
   <script>window.tableau = window.parent.__mockDialogTableau;</script>
-  <script src="./kpi-formula.js?v=1.3.0"></script>
-  <script src="./format.js?v=1.3.0" defer></script>
+  <script src="./kpi-formula.js?v=1.3.1"></script>
+  <script src="./format.js?v=1.3.1" defer></script>
 </head>
 <body>
   <form id="form" class="fx" autocomplete="off">
@@ -83,6 +83,9 @@
             </label>
             <label class="fx-field">Category names
               <select name="labelAlign"><option value="left">Left aligned</option><option value="right">Right aligned</option></select>
+            </label>
+            <label class="fx-field">Long names
+              <select name="longNames"><option value="wrap">Wrap to the next line</option><option value="cut">One line, cut with …</option></select>
             </label>
           </div>
         </section>

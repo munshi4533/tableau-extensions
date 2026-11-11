@@ -87,3 +87,9 @@ body.has-selection .bl-row:not(.dim) .bl-lab, body.has-selection .bl-row:not(.di
 .bl-header:not(.center) .bl-tree { margin-left: auto; }
 .bl-header .bl-tree + .bl-switch { margin-left: 6px; }
 .bl-tt-head small { font-weight: 400; color: var(--ink-3); }
+
+/* long category names: wrap onto up to 3 lines */
+.bl-row.wraps .bl-name { white-space: normal; overflow-wrap: anywhere; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+.bl-row.is-wrapped .bl-lab { white-space: normal; }
+.bl-lab.right .bl-name { text-align: right; }
+.bl-tt-cap { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); margin-bottom: 2px; }

@@ -37,6 +37,7 @@
     barColor2: '#1baf7a', // second color of the gradient
     gradientSpan: 'width', // width (the color shows how far a bar reaches) | bar (each bar runs color 1 → color 2)
     labelAlign: 'left', // category labels: left | right
+    longNames: 'wrap', // long category names: wrap (up to 3 lines, the row grows) | cut (one line with …)
     labelSize: 11, valueSize: 11, titleSize: 14,
     labelColor: '#0b0b0b', valueColor: '#0b0b0b',
     valueWeight: '400',
@@ -374,9 +375,30 @@
     const labW = Math.min(W * 0.38, Math.max(40, nameW + TOG + 10));
     const areaW = Math.max(40, W - labW - 8);
     const valW = d3.max(list, (r) => tw(label(r), valF)) + 8;
-    // row height shares the zone; bar thickness follows the chosen style
+    // long names: wrap onto up to 3 lines inside the name column (the row grows for them)
+    const wrap = cfg.longNames !== 'cut';
+    const lineH = Math.round((+cfg.labelSize || 11) * 1.25);
+    const linesOf = (r) => {
+      const room = labW - TOG - r.depth * INDENT - 4;
+      if (!wrap || tw(r.name, labF) <= room) return 1;
+      let n = 1; let line = '';
+      for (const word of r.name.split(/\s+/)) {
+        const tryLine = line ? line + ' ' + word : word;
+        if (line && tw(tryLine, labF) > room) { n++; line = word; } else line = tryLine;
+        while (tw(line, labF) > room && line.length > 1) { n++; line = line.slice(Math.max(1, Math.floor(line.length * room / tw(line, labF)))); } // one very long word
+      }
+      return Math.min(3, n);
+    };
+    list.forEach((r) => { r.lines = linesOf(r); r.need = r.lines * lineH + 6; });
+    // row height shares the zone; rows with wrapped names take what they need, the others share the rest
     let rowH = Math.max(18, Math.min(64, H / list.length));
+    for (let it = 0; it < 3; it++) {
+      const tall = list.filter((r) => r.need > rowH);
+      if (!tall.length || tall.length === list.length) break;
+      rowH = Math.max(18, Math.min(64, (H - d3.sum(tall, (r) => r.need)) / (list.length - tall.length)));
+    }
     if (cfg.thickness === 'custom') rowH = Math.max(rowH, Math.min(80, +cfg.barSize || 10) + 8);
+    const hOf = (r) => Math.max(rowH, r.lines > 1 ? r.need : 0);
     const th = cfg.thickness === 'custom' ? Math.max(2, Math.min(80, +cfg.barSize || 10)) : Math.max(2, Math.round({ thin: 5, normal: rowH * 0.42, thick: rowH * 0.66 }[cfg.thickness] || 5));
     const radius = { square: 0, slight: Math.min(3, th / 4), rounded: th * 0.3, pill: th / 2 }[cfg.corners] ?? th / 2;
     const pos = cfg.labelPos;
@@ -384,14 +406,15 @@
     // with a track (or a target), labels need their own room at the right; without, long bars may put the label underneath
     const scaleW = pos === 'auto' && trackMode === 'none' ? areaW : (pos === 'auto' ? areaW - valW : fullFor);
     const reserveBelow = pos === 'below' || pos === 'auto';
-    const canBelow = rowH >= th + (+cfg.valueSize || 11) + 6;
+    const canBelowAt = (h) => h >= th + (+cfg.valueSize || 11) + 6;
 
-    box.style.justifyContent = list.length * rowH > H + 1 ? 'flex-start' : ''; // many bars: scroll instead of squeezing
+    box.style.justifyContent = d3.sum(list, hOf) > H + 1 ? 'flex-start' : ''; // many bars: scroll instead of squeezing
     list.forEach((r, i) => {
       const el = document.createElement('div');
-      el.className = 'bl-row' + (r.isNull && cfg.nullLast ? ' is-null' : '') + (r.others ? ' is-others' : '') + (r.depth ? ' is-sub' : '') + (r.hasKids ? ' has-kids' : '') + (expanded.has(r.path) ? ' is-open' : '');
+      el.className = 'bl-row' + (r.lines > 1 ? ' is-wrapped' : '') + (wrap ? ' wraps' : '') + (r.isNull && cfg.nullLast ? ' is-null' : '') + (r.others ? ' is-others' : '') + (r.depth ? ' is-sub' : '') + (r.hasKids ? ' has-kids' : '') + (expanded.has(r.path) ? ' is-open' : '');
       el.dataset.path = r.path;
-      el.style.height = rowH + 'px';
+      const rh = hOf(r); const canBelow = canBelowAt(rh);
+      el.style.height = rh + 'px';
       el.style.gridTemplateColumns = `${labW}px 1fr`;
       const color = r.color = barColor(r, i, list, maxV);
       let w = r.v === null ? 0 : Math.max(r.v > 0 ? Math.min(th, 3) : 0, (Math.max(0, r.v) / maxV) * scaleW);
@@ -412,7 +435,7 @@
       if (trackMode !== 'none' && where === 'below') where = 'end';
       const tick = r.target ? `<b class="bl-target" style="left:${(r.target / maxV) * scaleW}px;height:${th + 6}px"></b>` : '';
       const txt = label(r);
-      const lab = txt ? `<span class="bl-val ${where}" style="${where === 'end' ? `left:${reach + 6}px` : where === 'below' ? `left:${Math.max(0, w - tw(txt, valF))}px;top:calc(50% + ${th / 2 + 2}px)` : 'left:6px'}">${esc(txt)}</span>` : '';
+      const lab = txt ? `<span class="bl-val ${where}" style="${where === 'end' ? `left:${reach + 6}px` : where === 'below' ? `left:${Math.max(0, w - tw(txt, valF) - 4)}px;top:calc(50% + ${th / 2 + 2}px)` : 'left:6px'}">${esc(txt)}</span>` : '';
       const tog = tree ? `<span class="bl-tog" style="margin-left:${r.depth * INDENT}px">${r.hasKids ? (expanded.has(r.path) ? '−' : '+') : ''}</span>` : '';
       el.innerHTML = `<div class="bl-lab ${cfg.labelAlign === 'right' ? 'right' : ''}" title="${esc(r.name)}">${tog}<span class="bl-name">${esc(r.name)}</span></div>` +
         `<div class="bl-area">${trackW ? `<div class="bl-track" style="width:${trackW}px;height:${th}px;border-radius:${radius}px"></div>` : ''}${bar}${tick}${lab}</div>`;
@@ -480,6 +503,14 @@
     if (model.hasBreakdown) html += '<div class="bl-tt-sub">' + model.segNames.map((s, i) => { const sv = kpiValue(k, r.segs.get(s) || {}); return sv === null || sv === undefined ? '' : `<div class="bl-tt-row${seg && seg.dataset.seg === s ? ' hl' : ''}"><span><i style="background:${PALETTE[i % PALETTE.length]}"></i>${esc(s)}</span><b>${esc(fmt(sv))}${r.v ? ' · ' + fmtPct(sv / r.v) : ''}</b></div>`; }).join('') + '</div>';
     const ex = [...(r.extras || new Map()).entries()].filter(([, v]) => v !== '');
     if (ex.length) html += '<div class="bl-tt-sub">' + ex.map(([kk, v]) => `<div class="bl-tt-row"><span>${esc(cleanName(kk))}</span><b>${esc(v)}</b></div>`).join('') + '</div>';
+    // a closed bar: what is inside it (its sub-categories, largest first)
+    if (r.hasKids && !expanded.has(r.path)) {
+      const kids = r.kids.map((c) => ({ name: c.name, v: kpiValue(k, c.vals) })).sort((a, b) => (b.v ?? -Infinity) - (a.v ?? -Infinity));
+      const MAXK = 8; const shown = kids.slice(0, MAXK);
+      html += `<div class="bl-tt-sub"><div class="bl-tt-cap">${esc(model.levelNames[r.depth + 1] || 'Inside')}</div>` +
+        shown.map((c) => `<div class="bl-tt-row"><span>${esc(c.name)}</span><b>${esc(fmt(c.v))}${share && r.v && c.v !== null ? ' · ' + fmtPct(c.v / r.v) : ''}</b></div>`).join('') +
+        (kids.length > MAXK ? `<div class="bl-tt-row"><span>+ ${kids.length - MAXK} more</span></div>` : '') + '</div>';
+    }
     if (r.others) html += '<div class="bl-tt-sub">Everything outside the Top ' + (r.parent ? +cfg.childTopN : +cfg.topN) + '</div>';
     if (r.hasKids) html += `<div class="bl-tt-sub">${expanded.has(r.path) ? 'Double-click or − to close' : `Double-click or + to open its ${esc(model.levelNames[r.depth + 1] || 'details')}`}</div>`;
     const tt = $('tooltip'); tt.innerHTML = html; tt.hidden = false;

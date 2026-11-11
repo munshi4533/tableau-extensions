@@ -14,7 +14,7 @@
   const opts = (list, v) => list.map(([k, t]) => `<option value="${esc(k)}" ${String(k) === String(v) ? 'selected' : ''}>${esc(t)}</option>`).join('');
   // ---- presets: the look only (never KPIs, formulas, Top N, sort or title text)
   const STYLE_KEYS = ['thickness', 'barSize', 'corners', 'track', 'colorMode', 'barColor', 'barColor2', 'gradientSpan',
-    'labelContent', 'labelPos', 'labelAlign', 'labelSize', 'valueSize', 'valueWeight', 'labelColor', 'valueColor',
+    'labelContent', 'labelPos', 'labelAlign', 'longNames', 'labelSize', 'valueSize', 'valueWeight', 'labelColor', 'valueColor',
     'titleSize', 'titleAlign', 'showTitle', 'nullLast', 'background', 'bgColor', 'subShade'];
   // Team presets: built into the extension, the same for everyone (send a style code to add one)
   const TEAM_PRESETS = [
