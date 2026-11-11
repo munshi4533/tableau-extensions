@@ -137,6 +137,7 @@
     if (loading) { loadAgain = true; return; }
     loading = true; loadAgain = false;
     let changed = false; let waiting = false;
+    await selecting; // never read while Tableau is still applying our click
     // a slow answer (Tableau Server): show "Updating…" after a moment instead of looking frozen
     // (not for the reload Tableau sends after our own click: that would fade the bar you just highlighted)
     if (lastData) updTimer = setTimeout(() => { if (Date.now() - selfSelectAt > 4000) setUpdating(true); }, 450); // checked when it fires: the click may come a moment later
@@ -150,7 +151,13 @@
         }
         emptyTries = 0;
         const sig = signature(data, enc);
-        if (sig !== lastSig || !model || model.error) { lastSig = sig; lastData = data; lastEnc = enc; model = buildModel(data, enc); changed = true; }
+        if (sig !== lastSig || !model || model.error) {
+          lastSig = sig;
+          const m2 = buildModel(data, enc);
+          // one dashboard action that also targets this sheet: our own click filtered our own data down to the
+          // clicked dates. Keep all dates (so the big number shows the selection and the chart stays whole).
+          if (isSelfFilter(m2)) liveModel = m2; else { liveModel = null; lastData = data; lastEnc = enc; model = m2; changed = true; }
+        }
         break;
       } catch (e) {
         console.error(e);
@@ -162,8 +169,10 @@
     loading = false;
     document.body.classList.remove('is-first-load');
     if (!waiting) setUpdating(false);
-    if (changed) render();
-    if (loadAgain) load();
+    try { if (changed) render(); } catch (e) { console.error(e); }
+    if (loadAgain) { load(); return; }
+    if (awaitingFull && (!liveModel || Date.now() - awaitingFull > 15000)) awaitingFull = 0; // all dates are back
+    if (selPending && !awaitingFull) { const ev = selPending; selPending = null; sendSelection(ev); }
   }
   // quick fingerprint of the data (fields + every value) to skip redraws when nothing changed
   function signature ({ rows, columns }, enc) {
@@ -729,32 +738,65 @@
   // Click the same bar again (or an empty spot) to clear; Ctrl / Cmd + click adds dates.
   let sel = null; // { ranges: [[a, b], ...] } currently selected dates / months
   function isSelected (a, b) { return sel ? sel.ranges.some(([x, y]) => a <= y && b >= x) : null; }
-  function tuplesIn (ranges) {
+  const inRanges = (t, ranges) => ranges.some(([a, b]) => t >= a && t <= b);
+  function tuplesIn (ranges, m = model) {
     const ids = [];
-    model.tuplesByDate.forEach((list, t) => { if (ranges.some(([a, b]) => t >= a && t <= b)) ids.push(...list); });
+    if (m && m.tuplesByDate) m.tuplesByDate.forEach((list, t) => { if (inRanges(t, ranges)) ids.push(...list); });
     return ids;
+  }
+  // ---- self-filtering (one filter action on every sheet, this one included) ----
+  let liveModel = null; // the data as Tableau has it now, filtered by our own click (null = not filtered by it)
+  let sentRanges = []; // dates of the last selection sent to Tableau
+  let selecting = Promise.resolve(); // the selectTuplesAsync in flight
+  let selPending = null; // a click made while data was being read (or while we clear first)
+  let awaitingFull = 0;
+  const datesOf = (m) => (m && m.tuplesByDate ? [...m.tuplesByDate.keys()] : []);
+  function isSelfFilter (m2) {
+    if (!sel || !model || !model.tuplesByDate || !m2 || !m2.tuplesByDate) return false;
+    const now = datesOf(m2); const all = datesOf(model);
+    if (!now.length || now.length >= all.length) return false;
+    return now.every((t) => inRanges(t, sel.ranges) || inRanges(t, sentRanges));
+  }
+  function doSelect (ids, ev) {
+    const anchor = { tooltipAnchorPoint: { x: ev ? ev.pageX : 0, y: ev ? ev.pageY : 0 } };
+    if (ids.length && sel) sentRanges = liveModel ? [...sentRanges, ...sel.ranges] : sel.ranges;
+    const p = worksheet.selectTuplesAsync(ids, tableau.SelectOptions.Simple, anchor).catch((e) => console.warn('Could not select', e));
+    selecting = Promise.race([p, new Promise((res) => setTimeout(res, 8000))]);
+  }
+  function sendSelection (ev) {
+    selfSelectAt = Date.now();
+    if (loading) { selPending = ev || {}; return; } // sent when the read finishes, with fresh tuple ids
+    if (!sel) { doSelect([], ev); return; }
+    if (liveModel) {
+      // filtered by our own earlier click: Tableau only knows the dates still in that filter
+      const want = datesOf(model).filter((t) => inRanges(t, sel.ranges));
+      const live = liveModel.tuplesByDate;
+      if (want.every((t) => live.has(t))) { doSelect(tuplesIn(sel.ranges, liveModel), ev); return; }
+      // a date outside the filter: clear first (all dates come back), then select it
+      selPending = ev || {}; awaitingFull = Date.now();
+      doSelect([], null);
+      setTimeout(refresh, 3000); setTimeout(refresh, 8000); // in case Tableau sends no event
+      return;
+    }
+    doSelect(tuplesIn(sel.ranges), ev);
   }
   function selectRange (a, b, ev) {
     const add = ev && (ev.ctrlKey || ev.metaKey); // Ctrl / Cmd + click adds or removes one date, like in Tableau
-    const anchor = { tooltipAnchorPoint: { x: ev ? ev.pageX : 0, y: ev ? ev.pageY : 0 } };
     const same = (r) => r[0] === a && r[1] === b;
     let ranges;
     if (add && sel) ranges = sel.ranges.some(same) ? sel.ranges.filter((r) => !same(r)) : [...sel.ranges, [a, b]];
     else if (sel && sel.ranges.length === 1 && same(sel.ranges[0])) ranges = []; // same bar again = clear
     else ranges = [[a, b]];
     if (!ranges.length) { clearSelection(); return; }
-    const ids = tuplesIn(ranges);
-    if (!ids.length) return;
+    if (!tuplesIn(ranges).length) return;
     sel = { ranges };
-    selfSelectAt = Date.now();
-    worksheet.selectTuplesAsync(ids, tableau.SelectOptions.Simple, anchor).catch((e) => console.warn('Could not select', e));
+    sendSelection(ev ? { pageX: ev.pageX, pageY: ev.pageY } : null);
     hideTooltip(); render();
   }
   function clearSelection () {
     if (!sel) return;
     sel = null;
-    selfSelectAt = Date.now();
-    worksheet.selectTuplesAsync([], tableau.SelectOptions.Simple, { tooltipAnchorPoint: { x: 0, y: 0 } }).catch(() => {});
+    sendSelection(null);
     render();
   }
 
