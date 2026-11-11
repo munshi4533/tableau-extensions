@@ -63,6 +63,8 @@
     worksheet.addEventListener(tableau.TableauEventType.SummaryDataChanged, refresh);
     try { worksheet.addEventListener(tableau.TableauEventType.FilterChanged, refresh); } catch (e) { /* n/a */ }
     watchParameters();
+    // the selection lives in Tableau: follow it when it changes elsewhere (or after Tableau reloads this extension)
+    try { worksheet.addEventListener(tableau.TableauEventType.MarkSelectionChanged, () => { if (Date.now() - selfSelectAt > 2500) { needSync = true; if (!loading) { needSync = false; syncFromTableau(); } } }); } catch (e) { /* n/a */ }
     // click an empty spot to clear the selection
     document.addEventListener('click', (e) => { if (selected && !e.target.closest('.bl-row, .bl-switch, .bl-tree')) clearSelection(); });
     try { tableau.extensions.settings.addEventListener(tableau.TableauEventType.SettingsChanged, () => { loadSettings(); rebuild(); render(); }); } catch (e) { /* n/a */ }
@@ -89,6 +91,7 @@
     if (loading) { loadAgain = true; return; }
     loading = true; loadAgain = false;
     let changed = false; let waiting = false;
+    await selecting; // never read while Tableau is still applying our click (its tuple ids would change under it)
     // a slow answer (Tableau Server): show "Updating…" after a moment instead of looking frozen
     // (not for the reload Tableau sends after our own click: that would fade the bar you just highlighted)
     if (lastData) updTimer = setTimeout(() => { if (Date.now() - selfSelectAt > 4000) setUpdating(true); }, 450); // checked when it fires: the click may come a moment later
@@ -98,11 +101,17 @@
         // Tableau Server can answer "no rows" for several seconds on a cold filter query: keep the chart
         // (faded, "Updating…") and ask again with growing gaps, ~10 s in total, before showing "No data"
         if (!data.rows.length && lastData && lastData.rows.length && emptyTries < EMPTY_WAITS.length) {
-          setUpdating(true); setTimeout(refresh, EMPTY_WAITS[emptyTries++]); waiting = true; break;
+          if (Date.now() - selfSelectAt > 4000) setUpdating(true); // not right after our own click: keep the highlight visible setTimeout(refresh, EMPTY_WAITS[emptyTries++]); waiting = true; break;
         }
         emptyTries = 0;
         const sig = signature(data, enc);
-        if (sig !== lastSig || !model || model.error) { lastSig = sig; lastData = data; lastEnc = enc; model = buildModel(data, enc); changed = true; }
+        if (sig !== lastSig || !model || model.error) {
+          lastSig = sig;
+          const m2 = buildModel(data, enc);
+          // one dashboard action that also targets this sheet: our own click filtered our own bars down to
+          // the selected ones. Keep showing all bars (selected in color); remember the filtered data for its tuple ids.
+          if (isSelfFilter(m2)) { liveModel = m2; } else { liveModel = null; lastData = data; lastEnc = enc; model = m2; changed = true; if (!selected && !needSync) saveBase(data); } // (not before we know Tableau's selection)
+        }
         break;
       } catch (e) {
         console.error(e);
@@ -114,8 +123,11 @@
     loading = false;
     document.body.classList.remove('is-first-load');
     if (!waiting) setUpdating(false);
-    if (changed) render();
-    if (loadAgain) load();
+    try { if (changed) render(); } catch (e) { console.error(e); }
+    if (loadAgain) { load(); return; }
+    // a click made while we were reading: send it now, with the tuple ids of the data just read
+    if (awaitingFull && (!liveModel || Date.now() - awaitingFull > 15000)) awaitingFull = 0; // the clear went through: all bars are back
+    if (selPending && !awaitingFull) { const a = selPending; selPending = null; sendSelection(a); } else if (needSync && model && model.cats) { needSync = false; syncFromTableau(); }
   }
   function signature ({ rows, columns }, enc) {
     let h = 2166136261;
@@ -200,7 +212,7 @@
     const finish = (map) => [...map.values()].map((c) => { c.kids = finish(c.children); delete c.children; return c; });
     measures.forEach((m) => { m.unit = m.sample ? detectUnit(m.sample.text, m.sample.y) : detectUnit(null); });
     return {
-      catName: cleanName(catFs[0].name), levelNames: catKs.map(cleanName), levels: catKs.length,
+      catName: cleanName(catFs[0].name), catKs, levelNames: catKs.map(cleanName), levels: catKs.length,
       measures, cats: finish(root), segNames, hasBreakdown: !!brK, hasTarget: !!tgK, extraKeys
     };
   }
@@ -278,7 +290,7 @@
       const tg = rest.some((c) => c.target !== null) ? d3.sum(rest, (c) => c.target || 0) : null;
       const name = `Others (${rest.length})`;
       const depth = parent ? parent.depth + 1 : 0;
-      list.push({ name, path: parent ? parent.path + SEP + '\u0000others' : '\u0000others', depth, others: true, vals, segs, target: tg, v: kpiValue(k, vals), tuples: [].concat(...rest.map((c) => c.tuples)), extras: new Map(), kids: [], parent, hidden: rest.length });
+      list.push({ name, path: parent ? parent.path + SEP + '\u0000others' : '\u0000others', depth, others: true, vals, segs, target: tg, v: kpiValue(k, vals), tuples: [].concat(...rest.map((c) => c.tuples)), members: rest.map((c) => c.path), extras: new Map(), kids: [], parent, hidden: rest.length });
     }
     if (cfg.nullLast) list = [...list.filter((c) => !c.isNull), ...list.filter((c) => c.isNull)];
     return list;
@@ -534,27 +546,135 @@
     const ev = { ctrlKey: e.ctrlKey, metaKey: e.metaKey, pageX: e.pageX, pageY: e.pageY };
     pending = { r, timer: setTimeout(() => { pending = null; select(r, ev); }, 260) };
   }
+  let selecting = Promise.resolve(); // the selectTuplesAsync in flight
+  let selPending = null; // a click made while data was being read
+  let needSync = true; // read Tableau's selection once the first data is in (the extension may have been reloaded)
   function select (r, e) {
     const add = e.ctrlKey || e.metaKey;
     let next;
     if (add && selected) { next = new Set(selected); if (next.has(r.path)) next.delete(r.path); else next.add(r.path); } else if (selected && selected.size === 1 && selected.has(r.path)) next = new Set(); else next = new Set([r.path]);
     if (!next.size) { clearSelection(); return; }
     selected = next;
-    const ids = [...new Set([].concat(...lastRows.filter((x) => selected.has(x.path)).map((x) => x.tuples)))];
-    selfSelectAt = Date.now();
-    worksheet.selectTuplesAsync(ids, tableau.SelectOptions.Simple, { tooltipAnchorPoint: { x: e.pageX, y: e.pageY } }).catch((er) => console.warn('Could not select', er));
     markSelection();
+    sendSelection({ x: e.pageX, y: e.pageY });
   }
   function clearSelection () {
     if (!selected) return;
     selected = null;
-    selfSelectAt = Date.now();
-    worksheet.selectTuplesAsync([], tableau.SelectOptions.Simple, { tooltipAnchorPoint: { x: 0, y: 0 } }).catch(() => {});
     markSelection();
+    sendSelection({ x: 0, y: 0 });
+  }
+  // ---- self-filtering (one filter action on every sheet, this one included) ----
+  let liveModel = null; // the data as Tableau has it now, filtered by our own selection (null = not filtered by it)
+  let sentLeaves = new Set(); // leaves of the last selection sent to Tableau
+  let awaitingFull = 0; // time we cleared the selection to reach a bar outside the filter; the new pick waits for all bars
+  const nodeByPath = (m, path) => { let hit = null; if (m && m.cats) eachNode(m.cats, (c) => { if (c.path === path) hit = c; }); return hit; };
+  const leafPaths = (m) => { const out = []; if (m && m.cats) eachNode(m.cats, (c) => { if (!c.kids || !c.kids.length) out.push(c.path); }); return out; };
+  // the leaf bars (deepest level) under the selected bars of the model shown
+  function selectedLeaves (sel) {
+    const out = new Set();
+    for (const p of sel || []) {
+      const row = lastRows.find((x) => x.path === p);
+      const paths = row && row.others ? row.members : [p];
+      for (const q of paths) { const n = nodeByPath(model, q); if (n) eachNode([n], (c) => { if (!c.kids || !c.kids.length) out.add(c.path); }); }
+    }
+    return out;
+  }
+  // new data = only (some of) the bars we selected, fewer than we show: Tableau filtered us by our own click
+  function isSelfFilter (m2) {
+    if (!selected || !model || !model.cats || !m2 || !m2.cats || Date.now() - selfSelectAt > 600000) return false;
+    const now = leafPaths(m2); const all = leafPaths(model);
+    if (!now.length || now.length >= all.length) return false;
+    const want = selectedLeaves(selected);
+    return now.every((l) => want.has(l) || sentLeaves.has(l)); // (or what we selected before: mid-way through a change)
+  }
+  // tuple ids of a bar (a sub-bar that is closed now still has its node in the model)
+  function tuplesOf (path) {
+    const row = lastRows.find((x) => x.path === path);
+    if (row) return row.tuples;
+    const hit = nodeByPath(model, path);
+    return hit ? hit.tuples : [];
+  }
+  function doSelect (ids, anchor) {
+    if (ids.length) { const w = selectedLeaves(selected); w.forEach((l) => sentLeaves.add(l)); if (!liveModel) sentLeaves = w; }
+    const p = worksheet.selectTuplesAsync(ids, tableau.SelectOptions.Simple, { tooltipAnchorPoint: anchor }).catch((er) => console.warn('Could not select', er));
+    selecting = Promise.race([p, new Promise((res) => setTimeout(res, 8000))]); // never wait forever
+  }
+  function sendSelection (anchor) {
+    selfSelectAt = Date.now();
+    if (loading) { selPending = anchor; return; } // sent when the read finishes, with fresh tuple ids
+    if (liveModel) {
+      // filtered by our own earlier click: Tableau only knows the marks still in the filter
+      if (!selected) { doSelect([], anchor); return; } // clearing brings all bars back
+      const want = selectedLeaves(selected);
+      const live = new Map(); eachNode(liveModel.cats, (c) => { if (!c.kids || !c.kids.length) live.set(c.path, c.tuples); });
+      if ([...want].every((l) => live.has(l))) { doSelect([...new Set([].concat(...[...want].map((l) => live.get(l))))], anchor); return; }
+      // a bar outside the filter: clear first (all bars come back), then select it with the new tuple ids
+      selPending = anchor; awaitingFull = Date.now();
+      doSelect([], { x: 0, y: 0 });
+      setTimeout(refresh, 3000); setTimeout(refresh, 8000); // in case Tableau sends no event
+      return;
+    }
+    const ids = selected ? [...new Set([].concat(...[...selected].map(tuplesOf)))] : [];
+    doSelect(ids, anchor);
+  }
+  // all bars, kept for this browser tab: if Tableau reloads the extension while our own click filters us,
+  // we can still show every bar instead of only the selected ones
+  const baseKey = () => 'barlist.base.' + (worksheet && worksheet.name) + '.' + location.pathname;
+  function saveBase (data) {
+    if (data.rows.length > 5000) return;
+    try {
+      const keys = data.columns.map((c) => c.fieldName);
+      sessionStorage.setItem(baseKey(), JSON.stringify({ columns: data.columns.map((c) => ({ fieldName: c.fieldName, index: c.index })), rows: data.rows.map((r) => keys.map((k) => { const d = r[k]; return d ? [d.value, d.formattedValue, typeof d.nativeValue === 'number' || typeof d.nativeValue === 'string' || d.nativeValue === null ? d.nativeValue : String(d.value)] : null; })) }));
+    } catch (e) { /* storage full or blocked */ }
+  }
+  let restoreTried = false;
+  function restoreBase () {
+    restoreTried = true;
+    if (!selected || liveModel || !lastEnc) return;
+    let saved = null; try { saved = JSON.parse(sessionStorage.getItem(baseKey()) || 'null'); } catch (e) { /* none */ }
+    if (!saved || !saved.rows || !saved.rows.length) return;
+    const keys = saved.columns.map((c) => c.fieldName);
+    const data = { columns: saved.columns, rows: saved.rows.map((v, i) => { const r = { __tupleId: i + 1 }; keys.forEach((k, j) => { r[k] = v[j] ? { value: v[j][0], formattedValue: v[j][1], nativeValue: v[j][2] } : null; }); return r; }) };
+    let base; try { base = buildModel(data, lastEnc); } catch (e) { return; }
+    if (!base || !base.cats) return;
+    const now = leafPaths(model); const all = new Set(leafPaths(base)); const want = selectedLeaves(selected);
+    if (now.length >= all.size || !now.every((l) => all.has(l) && want.has(l))) return; // not filtered by our selection
+    liveModel = model; model = base; lastData = data;
+    const sel = selected; render(); selected = sel; markSelection();
+  }
+  // show what is selected in Tableau (after the extension reloads, or when the selection changes elsewhere)
+  async function syncFromTableau () {
+    if (!model || !model.cats || !worksheet.getSelectedMarksAsync) return;
+    try {
+      const marks = await worksheet.getSelectedMarksAsync();
+      const t = marks && marks.data && marks.data[0];
+      if (!t || !t.data.length) { if (selected) { selected = null; markSelection(); } if (lastData && !liveModel) saveBase(lastData); return; }
+      const names = t.columns.map((c) => c.fieldName);
+      const idx = model.catKs.map((k) => { const n = resolve(k, names); return n === null ? -1 : t.columns.find((c) => c.fieldName === n).index; });
+      if (idx.some((i) => i < 0)) return;
+      const leaves = new Set(t.data.map((row) => idx.map((i) => formatted(row[i])).join(SEP)));
+      const allIn = (c) => (c.kids && c.kids.length ? c.kids.every(allIn) : leaves.has(c.path));
+      const pick = new Set();
+      const walk = (list) => list.forEach((c) => { if (allIn(c)) pick.add(c.path); else if (c.kids) walk(c.kids); });
+      walk(model.cats);
+      // show it on the bars that are on screen (a picked sub-bar of a closed bar: highlight the parent)
+      const vis = new Set(lastRows.map((x) => x.path));
+      const shown = new Set();
+      pick.forEach((p) => { let q = p; while (q && !vis.has(q)) q = q.includes(SEP) ? q.slice(0, q.lastIndexOf(SEP)) : ''; if (q) shown.add(q); });
+      selected = shown.size ? shown : null;
+      markSelection();
+      if (!restoreTried) restoreBase();
+    } catch (e) { console.warn('Could not read the selection', e); }
   }
   // a selected parent keeps its open sub-bars in color too
-  const isPicked = (path) => [...selected].some((s) => path === s || path.startsWith(s + SEP));
+  // (and a closed bar whose selected sub-bar is hidden inside it)
+  const isPicked = (path) => [...selected].some((s) => path === s || path.startsWith(s + SEP) || (s.startsWith(path + SEP) && !expanded.has(path)));
   function markSelection () {
+    if (selected) { // after a data change a selected bar may be gone: forget it instead of greying everything
+      const vis = new Set(lastRows.map((x) => x.path));
+      if (![...selected].some((p) => vis.has(p) || [...vis].some((v) => v.startsWith(p + SEP) || p.startsWith(v + SEP)))) selected = null;
+    }
     document.querySelectorAll('.bl-row').forEach((x) => x.classList.toggle('dim', !!selected && !isPicked(x.dataset.path)));
     document.body.classList.toggle('has-selection', !!selected);
   }

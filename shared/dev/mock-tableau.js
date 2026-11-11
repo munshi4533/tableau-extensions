@@ -63,6 +63,9 @@
   // Like Tableau: only ONE summary-data reader may be open at a time, calls take a moment,
   // and SummaryDataChanged can fire in bursts (filters, dashboard load). window.__mockFire(n) fires n events.
   const dataListeners = [];
+  const markListeners = [];
+  let served = []; // original row numbers of the last data read
+  const selOrig = () => { try { return JSON.parse(sessionStorage.getItem('mock.sel') || '[]'); } catch (e) { return []; } };
   let readerOpen = false;
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   window.__mockFire = (n = 1) => { for (let i = 0; i < n; i++) dataListeners.forEach((fn) => fn({})); };
@@ -73,7 +76,7 @@
   };
   const worksheet = {
     name: 'Mock Sheet',
-    addEventListener: (type, fn) => { if (type === 'summary-data-changed') dataListeners.push(fn); return () => {}; },
+    addEventListener: (type, fn) => { if (type === 'summary-data-changed') dataListeners.push(fn); if (type === 'mark-selection-changed') markListeners.push(fn); return () => {}; },
     // Pages like Tableau does. Scenarios may add types: ['string','float','int','date',...] per column.
     getSummaryDataReaderAsync: async (pageRowCount) => {
       window.__mockReads = (window.__mockReads || 0) + 1;
@@ -81,7 +84,12 @@
       if (readerOpen) throw new Error('[mock] A summary data reader is already open. Release it before opening another.');
       readerOpen = true;
       // window.__mockEmptyReads = n: the next n reads return no rows (Tableau mid-way through applying a filter action)
-      const d = window.__mockEmptyReads > 0 ? (window.__mockEmptyReads--, { ...data(), data: [] }) : data();
+      let d = window.__mockEmptyReads > 0 ? (window.__mockEmptyReads--, { ...data(), data: [] }) : data();
+      // ?selfFilter=1: one dashboard filter action that targets every sheet, this one included: our own
+      // selection filters our own data (like Tableau). served = original row numbers of the rows sent.
+      const sel = selOrig();
+      served = d.data.map((r, i) => i);
+      if (params.get('selfFilter') && sel.length) { served = sel.filter((i) => i < d.data.length); d = { ...d, data: served.map((i) => d.data[i]) }; }
       const size = pageRowCount || 10000;
       const pageCount = Math.max(1, Math.ceil(d.data.length / size));
       const columns = d.columns.map((c, i) => ({ fieldName: c, index: i, dataType: d.types ? d.types[i] : undefined }));
@@ -103,12 +111,27 @@
       };
     }),
     hoverTupleAsync: async (id) => { window.__lastHover = id; },
-    selectTuplesAsync: async (ids) => { window.__lastSelect = ids; console.log('[mock] select', ids); }
+    // like Tableau: the selection lives in the workbook (survives a reload of the extension), then
+    // MarkSelectionChanged and SummaryDataChanged fire a moment later
+    // tuple ids are row numbers of the data last read (ids outside it select nothing, like Tableau)
+    selectTuplesAsync: async (ids) => {
+      window.__lastSelect = ids; console.log('[mock] select', ids);
+      const orig = ids.map((id) => served[id - 1]).filter((i) => i !== undefined);
+      window.__lastSelectOrig = orig;
+      try { sessionStorage.setItem('mock.sel', JSON.stringify(orig)); } catch (e) { /* none */ }
+      setTimeout(() => { markListeners.forEach((fn) => fn({})); dataListeners.forEach((fn) => fn({})); }, +params.get('latency') || 30);
+    },
+    getSelectedMarksAsync: async () => {
+      await wait(+params.get('latency') || 30);
+      const d = data();
+      const columns = d.columns.map((c, i) => ({ fieldName: c, index: i }));
+      return { data: [{ columns, data: selOrig().map((i) => d.data[i]).filter(Boolean) }] };
+    }
   };
 
   let configureCb = null;
   window.tableau = {
-    TableauEventType: { SummaryDataChanged: 'summary-data-changed', SettingsChanged: 'settings-changed', ParameterChanged: 'parameter-changed', FilterChanged: 'filter-changed' },
+    TableauEventType: { SummaryDataChanged: 'summary-data-changed', MarkSelectionChanged: 'mark-selection-changed', SettingsChanged: 'settings-changed', ParameterChanged: 'parameter-changed', FilterChanged: 'filter-changed' },
     ErrorCodes: { DialogClosedByUser: 'dialog-closed-by-user' },
     SelectOptions: { Simple: 'select-options-simple', Toggle: 'select-options-toggle' },
     ClassNameKey: { Worksheet: 'tableau-worksheet' },
