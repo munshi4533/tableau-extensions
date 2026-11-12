@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="ext-version" content="1.1.0" />
+  <meta name="ext-version" content="1.2.0" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Format Funnel</title>
-  <link rel="stylesheet" href="./format.css?v=1.1.0" />
-  <script src="../../shared/lib/tableau.extensions.1.latest.min.js?v=1.1.0"></script>
-  <script src="./format.js?v=1.1.0" defer></script>
+  <link rel="stylesheet" href="./format.css?v=1.2.0" />
+  <script src="../../shared/lib/tableau.extensions.1.latest.min.js?v=1.2.0"></script>
+  <script src="./format.js?v=1.2.0" defer></script>
 </head>
 <body>
   <form id="form" class="fx" autocomplete="off">
@@ -32,13 +32,21 @@
           <h2>Progress</h2>
           <div class="fx-grid">
             <label class="fx-field">Style
-              <select name="progress"><option value="side">Two bars side by side</option><option value="stack">Two bars, one under the other</option><option value="ring">Two small rings</option></select>
+              <select name="progress"><option value="side">Two bars side by side</option><option value="stack">Two bars, one under the other</option><option value="ring">Two small rings</option><option value="text">Drop as text (previous step, total started)</option></select>
             </label>
             <label class="fx-field">Values in the boxes
               <select name="values"><option value="auto">Automatic (short when narrow)</option><option value="full">Full (474,765)</option><option value="short">Short (474.8K)</option></select>
             </label>
-            <label class="fx-field">Label of % of start <input type="text" name="startLabel" placeholder="of start" /></label>
-            <label class="fx-field">Label of % of previous <input type="text" name="prevLabel" placeholder="of previous" /></label>
+            <label class="fx-field" data-show="bars">Label of % of start <input type="text" name="startLabel" placeholder="of start" /></label>
+            <label class="fx-field" data-show="bars">Label of % of previous <input type="text" name="prevLabel" placeholder="of previous" /></label>
+          </div>
+          <div class="fx-grid" id="textFields">
+            <label class="fx-field">Title of the text <input type="text" name="dropTitle" placeholder="None" /></label>
+            <label class="fx-field">% in the text
+              <select name="dropPct"><option value="lost">Share that dropped</option><option value="kept">Share that converted</option></select>
+            </label>
+            <label class="fx-field">First line (vs previous) <input type="text" name="dropPrevLabel" placeholder="Previous step" /></label>
+            <label class="fx-field">Second line (vs first stage) <input type="text" name="dropStartLabel" placeholder="Total started" /></label>
           </div>
           <label class="fx-check"><input type="checkbox" name="autoSize" /> Grow with the zone <small>(bigger numbers, rings and bars in a bigger zone)</small></label>
           <p class="fx-hint">Side by side moves the two bars under each other by itself when a box gets narrow.</p>

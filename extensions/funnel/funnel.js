@@ -14,7 +14,7 @@
     showOverall: true, // header: overall conversion (first → last stage)
     showWeakest: true, // header: the weakest step
     autoSize: true, // boxes, numbers and rings grow when the zone is bigger
-    progress: 'side', // side (two bars side by side) | stack (one under the other) | ring (two small rings)
+    progress: 'side', // side (two bars side by side) | stack (one under the other) | ring (two small rings) | text (drop as text)
     arrows: 'drop', // drop (−386.5K) | step (18.6%) | none
     values: 'auto', // auto (short when the box is narrow) | full (474,765) | short (474.8K)
     layout: 'auto', // auto (row; a column in a tall narrow zone) | row | column
@@ -25,6 +25,9 @@
     prevColors: true, // % of previous in red / amber / green
     warnAt: 30, goodAt: 70, // % of previous: red below warnAt, amber below goodAt, green from goodAt
     startLabel: 'of start', prevLabel: 'of previous',
+    // progress = text: "Drop from:" then the drop from the previous step and from the first stage, count | %
+    dropTitle: 'Drop from:', dropPrevLabel: 'Previous step', dropStartLabel: 'Total started',
+    dropPct: 'lost', // % shown in the text: lost (share that dropped) | kept (share that converted)
     nameSize: 12, valueSize: 22, titleSize: 14,
     nameColor: '#52514e', valueColor: '#0b0b0b',
     boxFill: 'white', // white | transparent | custom
@@ -177,6 +180,7 @@
       s.ofStart = first ? (s.v ?? 0) / first : null;
       s.ofPrev = i === 0 ? null : (S[i - 1].v ? (s.v ?? 0) / S[i - 1].v : null);
       s.drop = i === 0 ? null : (S[i - 1].v ?? 0) - (s.v ?? 0);
+      s.dropStart = i === 0 ? null : (first ?? 0) - (s.v ?? 0);
     });
     renderHeader(S);
 
@@ -208,7 +212,7 @@
     const room = () => (mode === 'row' ? (H * 0.92) / tallest() : (H * 0.96) / used());
     // how far the content can grow before it no longer fits the box width (rings and stacked bars need less width)
     // measured at normal size: the longest stage name and number must still fit at the bigger size
-    const need = Math.max(cfg.progress === 'ring' ? 104 : 118, ...boxes.map((b) => Math.max(textW(b.querySelector('.fn-name')), textW(b.querySelector('.fn-val')))));
+    const need = Math.max(cfg.progress === 'ring' ? 104 : 118, ...boxes.map((b) => Math.max(textW(b.querySelector('.fn-name')), textW(b.querySelector('.fn-val')), ...[...b.querySelectorAll('.fn-tl')].map((x) => [...x.children].reduce((a, c) => a + textW(c) + 6, 0)))));
     const widthK = (boxW - 4) / (need + 26);
     let k = Math.max(1, Math.min(2.4, room(), widthK));
     const apply = () => {
@@ -259,12 +263,25 @@
     const pc = prevColor(s.ofPrev, s.color);
     let prog = '';
     const bar = (cls, label, p, c) => `<div class="fn-pb ${cls}${p === null ? ' na' : ''}"><div class="fn-pl"><span>${esc(label)}</span><b>${p === null ? '–' : fmtPct(p)}</b></div><div class="fn-track"><i style="width:${p === null ? 0 : Math.max(1.5, Math.min(100, p * 100))}%;background:${c}"></i></div></div>`;
-    if (cfg.progress === 'ring') prog = `<div class="fn-rings">${ring(s.ofStart, s.color, cfg.startLabel)}${ring(s.ofPrev, pc, cfg.prevLabel)}</div>`;
+    if (cfg.progress === 'text') prog = dropText(s, i, short, pc);
+    else if (cfg.progress === 'ring') prog = `<div class="fn-rings">${ring(s.ofStart, s.color, cfg.startLabel)}${ring(s.ofPrev, pc, cfg.prevLabel)}</div>`;
     else prog = `<div class="fn-pair ${cfg.progress === 'stack' ? 'stack' : 'side'}">${bar('start', cfg.startLabel, s.ofStart, s.color)}${bar('prev', cfg.prevLabel, s.ofPrev, pc)}</div>`;
     el.innerHTML = `<div class="fn-name" title="${esc(s.label)}">${esc(s.label)}</div><div class="fn-val">${esc(short ? fmtShort(s.v, s.unit) : fmtFull(s.v, s.unit))}</div>${prog}`;
     el.addEventListener('mousemove', (e) => showTip(e, s, i));
     el.addEventListener('mouseleave', hideTooltip);
     return el;
+  }
+  // Drop from:  Previous step: −30,234 | 20.2%   Total started: −472K | 79.8%   (previous first, then total)
+  function dropText (s, i, short, pc) {
+    const f = (x) => (x === null ? '–' : (x > 0 ? '−' : x < 0 ? '+' : '') + (short ? fmtShort(Math.abs(x), s.unit) : fmtFull(Math.abs(x), s.unit)));
+    const kept = cfg.dropPct === 'kept';
+    const line = (label, d, p, color) => (d === null
+      ? `<div class="fn-tl"><span class="l">${esc(label)}</span><span class="v na">–</span></div>` // the first stage: nothing dropped yet
+      : `<div class="fn-tl"><span class="l">${esc(label)}</span><span class="v">${esc(f(d))}</span><span class="sep">|</span><b${color ? ` style="color:${color}"` : ''}>${p === null ? '–' : fmtPct(kept ? p : 1 - p)}</b></div>`);
+    const first = i === 0;
+    return `<div class="fn-text">${cfg.dropTitle ? `<div class="fn-tt">${esc(cfg.dropTitle)}</div>` : ''}` +
+      line(cfg.dropPrevLabel, first ? null : s.drop, first ? null : s.ofPrev, first || !cfg.prevColors ? null : pc) +
+      line(cfg.dropStartLabel, first ? null : s.dropStart, first ? null : s.ofStart, null) + '</div>';
   }
   function ring (p, c, label) {
     const r = 13; const C = 2 * Math.PI * r; const off = p === null ? C : C * (1 - Math.max(0, Math.min(1, p)));

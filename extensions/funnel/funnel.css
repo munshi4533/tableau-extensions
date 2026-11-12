@@ -42,6 +42,18 @@ html, body { margin: 0; height: 100%; width: 100%; overflow: hidden; background:
 .fn-gap { flex: 0 0 10px; }
 .m-column .fn-gap { flex-basis: 8px; }
 
+/* drop as text: Drop from: / Previous step: −30,234 | 20.2% / Total started: −472K | 79.8% */
+.fn-text { font-size: calc(11.5px * var(--k)); color: var(--ink-2); line-height: 1.5; }
+.fn-tt { font-size: calc(10.5px * var(--k)); color: var(--ink-3); text-transform: none; margin-bottom: calc(1px * var(--k)); }
+.fn-tl { display: flex; align-items: baseline; gap: calc(5px * var(--k)); white-space: nowrap; }
+.fn-tl .l { color: var(--ink-3); }
+.fn-tl .l::after { content: ":"; }
+.fn-tl .v { margin-left: auto; color: var(--ink-1); font-weight: 600; font-variant-numeric: tabular-nums; }
+.fn-tl .sep { color: #c3c2b7; }
+.fn-tl b { color: var(--ink-1); font-variant-numeric: tabular-nums; min-width: 3.4em; text-align: right; }
+.fn-tl .v.na { color: var(--ink-3); font-weight: 400; }
+/* a narrow box: the label on its own line, the numbers under it */
+@container (max-width: 178px) { .fn-tl { flex-wrap: wrap; row-gap: 0; } .fn-tl .l { flex: 0 0 100%; } }
 /* two progress bars: side by side (stacked by themselves in a narrow box) or stacked */
 .fn-pair.side { display: grid; grid-template-columns: 1fr 1fr; gap: calc(10px * var(--k)); }
 .fn-pair.stack .fn-pb + .fn-pb { margin-top: calc(8px * var(--k)); }

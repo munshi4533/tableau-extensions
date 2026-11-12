@@ -61,6 +61,8 @@
     $('colorField').hidden = cfg.colorMode !== 'single';
     $('topColorField').hidden = cfg.topBar !== 'single';
     $('boxColorField').hidden = cfg.boxFill !== 'custom';
+    $('textFields').hidden = cfg.progress !== 'text';
+    document.querySelectorAll('[data-show="bars"]').forEach((el) => { el.hidden = cfg.progress === 'text'; });
     $('thresholds').classList.toggle('fx-dep', true); $('thresholds').classList.toggle('off', !cfg.prevColors);
   }
 

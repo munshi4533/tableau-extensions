@@ -11,7 +11,7 @@
   {
     "id": "funnel",
     "name": "Funnel",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "description": "Conversion funnel from the measures on the Stages shelf (e.g. Started \u2192 Submitted \u2192 Approved \u2192 Disbursed): one box per stage with % of start and % of previous stage, the drop between stages, overall conversion and the weakest step.",
     "manifestName": "Funnel",
     "trex": "manifests/Funnel.trex",
