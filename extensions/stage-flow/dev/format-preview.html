@@ -4,12 +4,12 @@
   <base href="../" />
   <!-- GENERATED preview (tools/build.py): sample data instead of Tableau -->
   <meta charset="utf-8" />
-  <meta name="ext-version" content="1.1.0" />
+  <meta name="ext-version" content="1.2.0" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Format Stage Flow (preview)</title>
-  <link rel="stylesheet" href="./format.css?v=1.1.0" />
+  <link rel="stylesheet" href="./format.css?v=1.2.0" />
   <script>window.tableau = window.parent.__mockDialogTableau;</script>
-  <script src="./format.js?v=1.1.0" defer></script>
+  <script src="./format.js?v=1.2.0" defer></script>
 </head>
 <body>
   <form id="form" class="fx" autocomplete="off">
@@ -50,7 +50,8 @@
             <label class="fx-field">Numbers <select name="values"><option value="auto">Automatic (short when tight)</option><option value="full">Full (591,405)</option><option value="short">Short (591.4K)</option></select></label>
             <label class="fx-color">Flow color <input type="color" name="mainColor" /></label>
           </div>
-          <label class="fx-check"><input type="checkbox" name="showStepPct" /> % of previous stage on the band</label>
+          <label class="fx-check"><input type="checkbox" name="showStepPct" /> Show the % of previous stage (e.g. 88.4%) on the band</label>
+          <div class="fx-grid"><label class="fx-field">% of previous <select name="stepStyle"><option value="big">Big, in the middle of the band</option><option value="small">Small, beside the stage number</option></select></label></div>
           <label class="fx-check"><input type="checkbox" name="showLegend" /> Legend</label>
         </section>
         <section>

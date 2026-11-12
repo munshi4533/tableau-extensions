@@ -21,6 +21,7 @@
     values: 'auto', // auto | full | short
     showOverall: true, showKept: true, showBiggest: true, showLegend: true,
     showStepPct: true, // % of previous stage on the band
+    stepStyle: 'big', // big (large, in the middle of the band) | small (beside the stage number)
     success: '', // the outcome that means "made it" ('' = automatic: Disbursed / Success / Completed …)
     mainColor: MAIN,
     labelSize: 11, valueSize: 12, titleSize: 14,
@@ -323,7 +324,16 @@
         el('path', { d: `M${a},${top} L${b},${top} L${b},${top + tn} L${a},${top + tn} Z`, fill: domMain(), opacity: 0.18, class: 'sf-band' }, svg);
         const pctW = tw('00.0%', Math.max(9, lab - 1), 700); const valW = tw(fmtN(st.reached, short), val, 700) + nodeW + 8;
         const xp = Math.max((a + b) / 2, x + valW + pctW / 2); const inBand = tn >= val * 2 + 14 && xp + pctW / 2 < b - 2;
-        if (cfg.showStepPct && step > pctW + 14) el('text', { x: inBand ? xp : (a + b) / 2, y: inBand ? top + tn / 2 + 4 : top + tn + lab + 2, 'text-anchor': 'middle', 'font-size': Math.max(9, lab - 1), 'font-weight': 700, class: 'sf-step' }, svg, fmtPct(st.reached ? s[i + 1].reached / st.reached : null));
+        const stepTxt = fmtPct(st.reached ? s[i + 1].reached / st.reached : null);
+        if (cfg.showStepPct && cfg.stepStyle !== 'small') {
+          // big % in the middle of the band between the two stages (smaller when the gap is narrow)
+          const room = b - a - 10; let fs = Math.max(11, Math.min(28, step * 0.2, flowH * 0.2));
+          while (fs > 10 && tw(stepTxt, fs, 700) > room) fs -= 1;
+          const cx = (a + b) / 2; const w2 = tw(stepTxt, fs, 700) / 2;
+          let cy = top + Math.max(tn, fs + 6) / 2 + fs * 0.35;
+          if (cx - w2 < x + valW && cy - fs * 0.8 < top + val + 4) cy = top + val + 8 + fs * 0.85; // clear of the stage number
+          if (tw(stepTxt, fs, 700) <= room) el('text', { x: cx, y: cy, 'text-anchor': 'middle', 'font-size': fs, 'font-weight': 700, class: 'sf-step big' }, svg, stepTxt);
+        } else if (cfg.showStepPct && step > pctW + 14) el('text', { x: inBand ? xp : (a + b) / 2, y: inBand ? top + tn / 2 + 4 : top + tn + lab + 2, 'text-anchor': 'middle', 'font-size': Math.max(9, lab - 1), 'font-weight': 700, class: 'sf-step' }, svg, fmtPct(st.reached ? s[i + 1].reached / st.reached : null));
         // the leak: curves down from the bottom of this stage into a bar split by outcome
         const L = F.leaks[i];
         if (L.total > 0) {

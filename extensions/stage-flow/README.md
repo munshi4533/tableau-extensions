@@ -29,5 +29,6 @@ Where applications go, stage by stage: a flow through ordered stages (e.g. Respo
 - Same loading as the other extensions: "Loading…" first, "Updating…" while filters apply, "No data for the current filters".
 
 ## Version history
+- **1.2.0**: The % of previous stage (e.g. 88.4%) can be big, in the middle of the band (new default), or small beside the stage number; on/off with Look → Show the % of previous stage.
 - **1.1.0**: Bigger main flow (wider stage bars, more height for the band; Look → Main flow: Large / Medium). Leaks drop straight down with square corners (Look → Leaks: Angled / Curved).
 - **1.0.0**: First version: flow with leaks (left to right / top to bottom), outcomes and reasons on hover, kept vs after the last stage, click to filter.

@@ -22,6 +22,7 @@ html, body { margin: 0; height: 100%; width: 100%; overflow: hidden; background:
 .sf-lab { fill: var(--ink-2); }
 .sf-val { fill: var(--ink-1); font-variant-numeric: tabular-nums; }
 .sf-step { fill: #1f5fae; font-variant-numeric: tabular-nums; }
+.sf-step.big { fill: #174f94; letter-spacing: -.01em; paint-order: stroke; stroke: rgba(255,255,255,.55); stroke-width: 3px; stroke-linejoin: round; }
 .sf-loss { fill: #b02a2a; font-variant-numeric: tabular-nums; }
 .sf-sub { fill: var(--ink-2); }
 [data-pick] { cursor: pointer; }
