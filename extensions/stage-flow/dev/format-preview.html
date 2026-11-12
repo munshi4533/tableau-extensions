@@ -4,12 +4,12 @@
   <base href="../" />
   <!-- GENERATED preview (tools/build.py): sample data instead of Tableau -->
   <meta charset="utf-8" />
-  <meta name="ext-version" content="1.0.0" />
+  <meta name="ext-version" content="1.1.0" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Format Stage Flow (preview)</title>
-  <link rel="stylesheet" href="./format.css?v=1.0.0" />
+  <link rel="stylesheet" href="./format.css?v=1.1.0" />
   <script>window.tableau = window.parent.__mockDialogTableau;</script>
-  <script src="./format.js?v=1.0.0" defer></script>
+  <script src="./format.js?v=1.1.0" defer></script>
 </head>
 <body>
   <form id="form" class="fx" autocomplete="off">
@@ -44,6 +44,8 @@
           <h2>Layout</h2>
           <div class="fx-grid">
             <label class="fx-field">Direction <select name="layout"><option value="horizontal">Left to right</option><option value="vertical">Top to bottom</option></select></label>
+            <label class="fx-field">Main flow <select name="flowSize"><option value="large">Large</option><option value="medium">Medium</option></select></label>
+            <label class="fx-field">Leaks <select name="links"><option value="angled">Angled (straight down)</option><option value="curved">Curved</option></select></label>
             <label class="fx-field">Band sizes <select name="sizes"><option value="true">True to the counts</option><option value="readable">Keep small stages readable</option></select></label>
             <label class="fx-field">Numbers <select name="values"><option value="auto">Automatic (short when tight)</option><option value="full">Full (591,405)</option><option value="short">Short (591.4K)</option></select></label>
             <label class="fx-color">Flow color <input type="color" name="mainColor" /></label>

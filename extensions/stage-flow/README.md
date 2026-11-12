@@ -19,7 +19,7 @@ Where applications go, stage by stage: a flow through ordered stages (e.g. Respo
 4. **Format Extension:**
    - **Stages:** rename (e.g. "Started"), hide (its applications count at the stage before it), move ▲ ▼.
    - **Outcomes:** which outcome means success (automatic: Disbursed / Success / Completed …), names and colors.
-   - **Look:** left to right or top to bottom, band sizes true or readable, numbers full or short, flow color, % of previous on the band, legend, header (first → last, last and kept, biggest drop), text sizes, background.
+   - **Look:** left to right or top to bottom, main flow large or medium, leaks angled or curved, band sizes true or readable, numbers full or short, flow color, % of previous on the band, legend, header (first → last, last and kept, biggest drop), text sizes, background.
 
 ## How it works
 
@@ -29,4 +29,5 @@ Where applications go, stage by stage: a flow through ordered stages (e.g. Respo
 - Same loading as the other extensions: "Loading…" first, "Updating…" while filters apply, "No data for the current filters".
 
 ## Version history
+- **1.1.0**: Bigger main flow (wider stage bars, more height for the band; Look → Main flow: Large / Medium). Leaks drop straight down with square corners (Look → Leaks: Angled / Curved).
 - **1.0.0**: First version: flow with leaks (left to right / top to bottom), outcomes and reasons on hover, kept vs after the last stage, click to filter.

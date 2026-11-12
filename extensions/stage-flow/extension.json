@@ -1,7 +1,7 @@
 {
   "name": "Stage Flow",
   "manifestName": "StageFlow",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Where applications go: a flow through ordered stages (e.g. Responsible lending → … → Disbursed) where what leaves at each stage peels off, split by outcome (Rejected / Cancelled / In progress) with the reasons on hover; after the last stage, kept vs cancelled.",
   "entry": "index.html",
   "icon": "icon.png",

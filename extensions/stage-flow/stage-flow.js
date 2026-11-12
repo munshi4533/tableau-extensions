@@ -16,6 +16,8 @@
     title: '',
     layout: 'horizontal', // horizontal (left to right) | vertical (top to bottom)
     sizes: 'true', // true (band thickness = count) | readable (small stages stay visible)
+    links: 'angled', // leaks: angled (straight down, square corners) | curved
+    flowSize: 'large', // main flow: large | medium (the leaks get the rest of the height)
     values: 'auto', // auto | full | short
     showOverall: true, showKept: true, showBiggest: true, showLegend: true,
     showStepPct: true, // % of previous stage on the band
@@ -295,15 +297,16 @@
     const s = F.stages; const n = s.length; const first = s[0].reached || 1;
     const lab = +cfg.labelSize || 11; const val = +cfg.valueSize || 12;
     const endW = Math.max(70, tw(outLabel(F.success || '') + ' ', lab, 700) + 30);
-    const nodeW = Math.max(8, Math.min(16, W / n / 9));
+    const big = cfg.flowSize !== 'medium';
+    const nodeW = big ? Math.max(10, Math.min(24, W / n / 6)) : Math.max(8, Math.min(16, W / n / 9));
     const step = (W - endW - nodeW - 6) / Math.max(1, n - 1);
     const short = cfg.values === 'short' || (cfg.values === 'auto' && step < 110);
     const labelLines = s.map((st) => wrap2(st.label, lab, Math.max(40, step - 8), 600));
     const top = (Math.max(...labelLines.map((l) => l.length)) * (lab + 3)) + 6;
     const leakTextH = val + lab + 10;
     const avail = H - top - 4;
-    const flowH = Math.max(24, avail * 0.46);
-    const curve = Math.max(16, avail * 0.12);
+    const flowH = Math.max(24, avail * (big ? 0.58 : 0.46));
+    const curve = Math.max(cfg.links === 'curved' ? 16 : 8, avail * (cfg.links === 'curved' ? 0.12 : 0.05));
     const leakH = Math.max(14, avail - flowH - curve - leakTextH);
     const leakY = top + flowH + curve;
     const scale = (v) => (cfg.sizes === 'readable' ? 0.15 + 0.85 * Math.sqrt(v / first) : v / first);
@@ -326,7 +329,11 @@
         if (L.total > 0) {
           const g = pickable(el('g', { class: 'sf-leak' }, svg), [].concat(...L.parts.map((p) => p.cells)), 'leak');
           const lw = Math.max(3, leakW * Math.sqrt(L.total / maxLeak)); const lx = a + 4;
-          el('path', { d: `M${a},${top + tn} L${a},${top + t} C${a},${leakY - curve * 0.3} ${lx},${leakY - curve * 0.6} ${lx},${leakY} L${lx + lw},${leakY} C${lx + lw},${leakY - curve} ${a + 4},${top + tn + curve * 0.5} ${a},${top + tn} Z`, fill: '#e34948', opacity: 0.12 }, g);
+          // angled: the lost part turns 90° and goes straight down into the leak bar; curved: a smooth S
+          const lk = cfg.links === 'curved'
+            ? `M${a},${top + tn} L${a},${top + t} C${a},${leakY - curve * 0.3} ${lx},${leakY - curve * 0.6} ${lx},${leakY} L${lx + lw},${leakY} C${lx + lw},${leakY - curve} ${a + 4},${top + tn + curve * 0.5} ${a},${top + tn} Z`
+            : `M${a},${top + tn} L${lx + lw},${top + tn} L${lx + lw},${leakY} L${lx},${leakY} L${lx},${top + t} L${a},${top + t} Z`;
+          el('path', { d: lk, fill: '#e34948', opacity: cfg.links === 'curved' ? 0.12 : 0.1 }, g);
           let cy = leakY;
           L.parts.forEach((p) => {
             const ph = leakH * p.v / L.total;
@@ -341,7 +348,7 @@
           g.addEventListener('mouseleave', hideTooltip);
         }
       }
-      const node = pickable(el('rect', { x, y: top, width: nodeW, height: t, rx: 2, fill: domMain(), class: 'sf-node' }, svg), st.cells, 'node');
+      const node = pickable(el('rect', { x, y: top, width: nodeW, height: t, rx: cfg.links === 'curved' ? 2 : 1, fill: domMain(), class: 'sf-node' }, svg), st.cells, 'node');
       node.addEventListener('mousemove', (e) => showTip(e, stageTip(i))); node.addEventListener('mouseleave', hideTooltip);
       el('text', { x: x + nodeW + 4, y: top + val, 'font-size': val, 'font-weight': 700, class: 'sf-val' }, svg, i === n - 1 ? '' : fmtN(st.reached, short));
     });
