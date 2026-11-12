@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base href="../" />
+  <!-- GENERATED preview (tools/build.py): sample data instead of Tableau -->
+  <meta charset="utf-8" />
+  <meta name="ext-version" content="1.0.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Format Funnel (preview)</title>
+  <link rel="stylesheet" href="./format.css?v=1.0.0" />
+  <script>window.tableau = window.parent.__mockDialogTableau;</script>
+  <script src="./format.js?v=1.0.0" defer></script>
+</head>
+<body>
+  <form id="form" class="fx" autocomplete="off">
+    <header class="fx-top">
+      <h1>Format Funnel</h1>
+      <p>Changes preview live on the sheet.</p>
+      <nav class="fx-tabs" id="tabs">
+        <button type="button" data-tab="stages" class="on">Stages</button>
+        <button type="button" data-tab="boxes">Boxes</button>
+        <button type="button" data-tab="look">Look</button>
+      </nav>
+    </header>
+
+    <main class="fx-body">
+      <div class="fx-tab" data-pane="stages">
+        <div class="fx-help">One box per measure on the <b>Stages</b> shelf. Rename, recolor, hide or move a stage here (▲ ▼). % of start compares every stage with the first one shown; % of previous with the one before it.</div>
+        <div id="stages"></div>
+      </div>
+
+      <div class="fx-tab" data-pane="boxes" hidden>
+        <section>
+          <h2>Progress</h2>
+          <div class="fx-grid">
+            <label class="fx-field">Style
+              <select name="progress"><option value="side">Two bars side by side</option><option value="stack">Two bars, one under the other</option><option value="ring">Two small rings</option></select>
+            </label>
+            <label class="fx-field">Values in the boxes
+              <select name="values"><option value="auto">Automatic (short when narrow)</option><option value="full">Full (474,765)</option><option value="short">Short (474.8K)</option></select>
+            </label>
+            <label class="fx-field">Label of % of start <input type="text" name="startLabel" placeholder="of start" /></label>
+            <label class="fx-field">Label of % of previous <input type="text" name="prevLabel" placeholder="of previous" /></label>
+          </div>
+          <p class="fx-hint">Side by side moves the two bars under each other by itself when a box gets narrow.</p>
+        </section>
+        <section>
+          <h2>% of previous colors</h2>
+          <label class="fx-check"><input type="checkbox" name="prevColors" /> Red / amber / green <small>(otherwise the stage color)</small></label>
+          <div class="fx-grid" id="thresholds">
+            <label class="fx-field">Red below (%) <input type="number" name="warnAt" min="0" max="100" step="1" /></label>
+            <label class="fx-field">Green from (%) <input type="number" name="goodAt" min="0" max="100" step="1" /></label>
+          </div>
+        </section>
+        <section>
+          <h2>Between the boxes</h2>
+          <div class="fx-grid">
+            <label class="fx-field">Arrows show
+              <select name="arrows"><option value="drop">The drop (−386.5K)</option><option value="step">The step % (18.6%)</option><option value="none">No arrows</option></select>
+            </label>
+            <label class="fx-field">Layout
+              <select name="layout"><option value="auto">Automatic (a column in tall, narrow zones)</option><option value="row">Always a row</option><option value="column">Always a column</option></select>
+            </label>
+          </div>
+        </section>
+      </div>
+
+      <div class="fx-tab" data-pane="look" hidden>
+        <section>
+          <h2>Header</h2>
+          <label class="fx-check"><input type="checkbox" name="header" /> Overall conversion and weakest step</label>
+          <div class="fx-grid"><label class="fx-field">Title <input type="text" name="title" placeholder="None" /></label></div>
+        </section>
+        <section>
+          <h2>Colors</h2>
+          <div class="fx-grid">
+            <label class="fx-field">Stage colors
+              <select name="colorMode"><option value="palette">A color per stage</option><option value="single">One color</option></select>
+            </label>
+            <label class="fx-color" id="colorField">Color <input type="color" name="color" /></label>
+          </div>
+        </section>
+        <section>
+          <h2>Text</h2>
+          <div class="fx-text">
+            <span class="h"></span><span class="h">Size</span><span class="h"></span><span class="h">Color</span>
+            <span class="n">Title</span>
+            <select name="titleSize"><option>11</option><option>12</option><option>13</option><option>14</option><option>16</option><option>18</option><option>20</option></select>
+            <span></span><span></span>
+            <span class="n">Stage names</span>
+            <select name="nameSize"><option>9</option><option>10</option><option>11</option><option>12</option><option>13</option><option>14</option><option>16</option></select>
+            <span></span><input type="color" name="nameColor" />
+            <span class="n">Values</span>
+            <select name="valueSize"><option>14</option><option>16</option><option>18</option><option>20</option><option>22</option><option>24</option><option>28</option><option>32</option></select>
+            <span></span><input type="color" name="valueColor" />
+          </div>
+        </section>
+        <section>
+          <h2>Boxes and background</h2>
+          <div class="fx-grid">
+            <label class="fx-field">Box fill <select name="boxFill"><option value="white">White</option><option value="transparent">Transparent</option></select></label>
+            <label class="fx-field">Background <select name="background"><option value="transparent">Transparent</option><option value="white">White</option><option value="custom">Custom color</option></select></label>
+            <label class="fx-color" id="bgColorField">Color <input type="color" name="bgColor" /></label>
+          </div>
+          <label class="fx-check"><input type="checkbox" name="boxBorder" /> Box border</label>
+        </section>
+      </div>
+    </main>
+
+    <footer class="fx-foot">
+      <button type="button" id="reset" class="fx-btn ghost">Reset to defaults</button>
+      <span class="fx-spacer"></span>
+      <button type="button" id="cancel" class="fx-btn ghost">Cancel</button>
+      <button type="button" id="ok" class="fx-btn primary">OK</button>
+    </footer>
+  </form>
+</body>
+</html>

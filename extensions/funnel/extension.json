@@ -1,0 +1,18 @@
+{
+  "name": "Funnel",
+  "manifestName": "Funnel",
+  "version": "1.0.0",
+  "description": "Conversion funnel from the measures on the Stages shelf (e.g. Started → Submitted → Approved → Disbursed): one box per stage with % of start and % of previous stage, the drop between stages, overall conversion and the weakest step.",
+  "entry": "index.html",
+  "icon": "icon.png",
+  "formatDialog": true,
+  "previewPages": ["index.html", "format.html"],
+  "encodings": [
+    {
+      "id": "stages", "name": "Stages",
+      "dataType": "numeric", "roles": ["continuous-measure"],
+      "maxCount": 10, "icon": "metric",
+      "tooltip": "One measure per stage, in funnel order (e.g. COUNTD(Started), COUNTD(Submitted), COUNTD(Approved), COUNTD(Disbursed)). Drag to reorder; rename and recolor in Format Extension."
+    }
+  ]
+}

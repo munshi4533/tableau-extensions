@@ -9,6 +9,15 @@
     "preview": "extensions/bar-list/dev/preview.html"
   },
   {
+    "id": "funnel",
+    "name": "Funnel",
+    "version": "1.0.0",
+    "description": "Conversion funnel from the measures on the Stages shelf (e.g. Started \u2192 Submitted \u2192 Approved \u2192 Disbursed): one box per stage with % of start and % of previous stage, the drop between stages, overall conversion and the weakest step.",
+    "manifestName": "Funnel",
+    "trex": "manifests/Funnel.trex",
+    "preview": "extensions/funnel/dev/preview.html"
+  },
+  {
     "id": "kpi-card",
     "name": "KPI Card",
     "version": "1.8.7",
