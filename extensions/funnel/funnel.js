@@ -11,19 +11,24 @@
   const PALETTE = ['#2a78d6', '#3d8ce0', '#1baf7a', '#eb6834', '#6250d6', '#eda100', '#e87ba4', '#008300', '#e34948', '#5aa0e8'];
   const DEFAULTS = {
     title: '', // shown above the boxes ('' = none)
-    header: true, // overall conversion (first → last) and the weakest step
+    showOverall: true, // header: overall conversion (first → last stage)
+    showWeakest: true, // header: the weakest step
+    autoSize: true, // boxes, numbers and rings grow when the zone is bigger
     progress: 'side', // side (two bars side by side) | stack (one under the other) | ring (two small rings)
     arrows: 'drop', // drop (−386.5K) | step (18.6%) | none
     values: 'auto', // auto (short when the box is narrow) | full (474,765) | short (474.8K)
     layout: 'auto', // auto (row; a column in a tall narrow zone) | row | column
-    colorMode: 'palette', // palette (a color per stage) | single
+    colorMode: 'palette', // progress bars / rings: palette (a color per stage) | single
     color: '#2a78d6',
+    topBar: 'stage', // colored line at the top of each box: stage (its progress color) | single | none
+    topColor: '#2a78d6',
     prevColors: true, // % of previous in red / amber / green
     warnAt: 30, goodAt: 70, // % of previous: red below warnAt, amber below goodAt, green from goodAt
     startLabel: 'of start', prevLabel: 'of previous',
     nameSize: 12, valueSize: 22, titleSize: 14,
     nameColor: '#52514e', valueColor: '#0b0b0b',
-    boxFill: 'white', // white | transparent
+    boxFill: 'white', // white | transparent | custom
+    boxColor: '#ffffff',
     boxBorder: true,
     background: 'transparent', bgColor: '#ffffff', // transparent | white | custom
     order: [], // stage keys in the order chosen in Format (new measures go at the end)
@@ -178,7 +183,7 @@
     // layout: a row of boxes; in a tall narrow zone a column; when even that does not fit, boxes wrap
     const W = strip.clientWidth; const H = strip.clientHeight; const n = S.length;
     const arrowW = cfg.arrows === 'none' ? 10 : 46;
-    const rowFits = W >= n * 118 + (n - 1) * arrowW;
+    const rowFits = W >= n * 104 + (n - 1) * arrowW;
     let mode = cfg.layout === 'row' ? (rowFits ? 'row' : 'wrap') : cfg.layout === 'column' ? 'column' : (rowFits ? 'row' : (H >= n * 96 + (n - 1) * 22 ? 'column' : 'wrap'));
     if (mode === 'row' && cfg.layout === 'auto' && H > W * 1.3 && H >= n * 96) mode = 'column';
     strip.classList.add('m-' + mode);
@@ -190,16 +195,44 @@
       else if (i && mode !== 'wrap') { const sp = document.createElement('div'); sp.className = 'fn-gap'; strip.appendChild(sp); }
       strip.appendChild(boxEl(s, i, short));
     });
+    fitSize(strip, mode, boxW, H);
   }
+  // grow the boxes (text, numbers, rings, bars) to use a bigger zone; never smaller than the normal size
+  function fitSize (strip, mode, boxW, H) {
+    strip.style.setProperty('--k', 1); strip.classList.remove('narrow');
+    if (!cfg.autoSize || mode === 'wrap') return;
+    const boxes = [...strip.querySelectorAll('.fn-box')];
+    if (!boxes.length) return;
+    const tallest = () => Math.max(...boxes.map((b) => b.offsetHeight));
+    const used = () => [...strip.children].reduce((a, c) => a + c.offsetHeight, 0);
+    const room = () => (mode === 'row' ? (H * 0.92) / tallest() : (H * 0.96) / used());
+    // how far the content can grow before it no longer fits the box width (rings and stacked bars need less width)
+    // measured at normal size: the longest stage name and number must still fit at the bigger size
+    const need = Math.max(cfg.progress === 'ring' ? 104 : 118, ...boxes.map((b) => Math.max(textW(b.querySelector('.fn-name')), textW(b.querySelector('.fn-val')))));
+    const widthK = (boxW - 4) / (need + 26);
+    let k = Math.max(1, Math.min(2.4, room(), widthK));
+    const apply = () => {
+      strip.style.setProperty('--k', k.toFixed(3));
+      strip.classList.toggle('narrow', cfg.progress === 'side' && boxW / k < 190); // side-by-side bars no longer fit next to each other
+    };
+    apply();
+    // the bigger content may wrap (rings, bars under each other): check the height once more
+    const r = room();
+    if (r < 1) { k = Math.max(1, k * r); apply(); }
+    // a row in a tall zone: the boxes also get taller (content spread out), so they fill the zone
+    if (mode === 'row') { const t = tallest(); const h = Math.min(H * 0.92, t * 1.7); if (h > t + 8) boxes.forEach((b) => { b.style.height = h + 'px'; b.classList.add('tall'); }); }
+  }
+  // width of the text itself (not of the block holding it)
+  function textW (el) { const r = document.createRange(); r.selectNodeContents(el); return Math.ceil(r.getBoundingClientRect().width); }
   function renderHeader (S) {
     const hdr = $('header'); const title = cfg.title || '';
     $('title').textContent = title; $('title').hidden = !title;
     let html = '';
-    if (cfg.header && S.length > 1) {
+    if (S.length > 1) {
       const last = S[S.length - 1];
       let weak = 1; for (let i = 2; i < S.length; i++) if ((S[i].ofPrev ?? 1) < (S[weak].ofPrev ?? 1)) weak = i;
-      html = `<div><span>${esc(S[0].label)} → ${esc(last.label)}</span><b>${fmtPct(last.ofStart)}</b></div>` +
-        `<div><span>Weakest step</span><b class="bad">${fmtPct(S[weak].ofPrev)}</b><small>${esc(S[weak - 1].label)} → ${esc(S[weak].label)}</small></div>`;
+      if (cfg.showOverall) html += `<div><span>${esc(S[0].label)} → ${esc(last.label)}</span><b>${fmtPct(last.ofStart)}</b></div>`;
+      if (cfg.showWeakest) html += `<div><span>Weakest step</span><b class="bad">${fmtPct(S[weak].ofPrev)}</b><small>${esc(S[weak - 1].label)} → ${esc(S[weak].label)}</small></div>`;
     }
     $('summary').innerHTML = html;
     hdr.hidden = !title && !html;
@@ -220,8 +253,9 @@
   }
   function boxEl (s, i, short) {
     const el = document.createElement('div');
-    el.className = 'fn-box';
+    el.className = 'fn-box' + (cfg.topBar === 'none' ? ' no-top' : '');
     el.style.setProperty('--c', s.color);
+    el.style.setProperty('--top', cfg.topBar === 'single' ? (cfg.topColor || '#2a78d6') : s.color);
     const pc = prevColor(s.ofPrev, s.color);
     let prog = '';
     const bar = (cls, label, p, c) => `<div class="fn-pb ${cls}${p === null ? ' na' : ''}"><div class="fn-pl"><span>${esc(label)}</span><b>${p === null ? '–' : fmtPct(p)}</b></div><div class="fn-track"><i style="width:${p === null ? 0 : Math.max(1.5, Math.min(100, p * 100))}%;background:${c}"></i></div></div>`;
@@ -234,7 +268,7 @@
   }
   function ring (p, c, label) {
     const r = 13; const C = 2 * Math.PI * r; const off = p === null ? C : C * (1 - Math.max(0, Math.min(1, p)));
-    return `<div class="fn-ring"><svg width="34" height="34" viewBox="0 0 34 34"><circle cx="17" cy="17" r="${r}" fill="none" stroke="var(--track)" stroke-width="5"/>` +
+    return `<div class="fn-ring"><svg viewBox="0 0 34 34"><circle cx="17" cy="17" r="${r}" fill="none" stroke="var(--track)" stroke-width="5"/>` +
       `<circle cx="17" cy="17" r="${r}" fill="none" stroke="${c}" stroke-width="5" stroke-dasharray="${C}" stroke-dashoffset="${off}" transform="rotate(-90 17 17)" stroke-linecap="round"${p === null ? ' opacity="0"' : ''}/></svg>` +
       `<div><b>${p === null ? '–' : fmtPct(p)}</b>${esc(label)}</div></div>`;
   }
@@ -278,7 +312,7 @@
   function applyStyle () {
     const r = document.documentElement.style;
     r.setProperty('--surface', cfg.background === 'white' ? '#ffffff' : cfg.background === 'custom' ? (cfg.bgColor || '#ffffff') : 'transparent');
-    r.setProperty('--box', cfg.boxFill === 'transparent' ? 'transparent' : '#ffffff');
+    r.setProperty('--box', cfg.boxFill === 'transparent' ? 'transparent' : cfg.boxFill === 'custom' ? (cfg.boxColor || '#ffffff') : '#ffffff');
     r.setProperty('--box-border', cfg.boxBorder ? 'var(--line)' : 'transparent');
     r.setProperty('--name-size', (+cfg.nameSize || 12) + 'px'); r.setProperty('--value-size', (+cfg.valueSize || 22) + 'px'); r.setProperty('--title-size', (+cfg.titleSize || 14) + 'px');
     r.setProperty('--name-color', cfg.nameColor || '#52514e'); r.setProperty('--value-color', cfg.valueColor || '#0b0b0b');
@@ -288,6 +322,7 @@
   function loadSettings () {
     let saved = {};
     try { const raw = tableau.extensions.settings.get('config'); if (raw) saved = JSON.parse(raw); } catch (e) { /* none */ }
+    if (saved.header === false && saved.showOverall === undefined) { saved.showOverall = false; saved.showWeakest = false; } // 1.0.0 had one switch
     cfg = { ...DEFAULTS, ...saved }; cfg.stages = cfg.stages || {}; cfg.order = Array.isArray(cfg.order) ? cfg.order : [];
   }
   async function openFormatDialog () {

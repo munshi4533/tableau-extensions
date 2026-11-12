@@ -9,6 +9,8 @@
   }
   const LOAN = [['CNTD(Started App)', 474765], ['CNTD(Submitted App)', 88272], ['CNTD(Approved App)', 78432], ['CNTD(Disbursed App)', 19856]];
   MockTableau.scenario('applications', (M) => stages(M, LOAN));
+  // names as on your dashboard
+  MockTableau.scenario('d360', (M) => stages(M, [['CNTD(Application Started)', 591405], ['CNTD(Application Submitted)', 119495], ['CNTD(Application Approved)', 94454], ['CNTD(Loan Disbursed)', 23173]]));
   MockTableau.scenario('five', (M) => stages(M, [['CNTD(Onboarded)', 120400], ['CNTD(KYC Done)', 101250], ['CNTD(Funded)', 64310], ['CNTD(First Transaction)', 51880], ['CNTD(Active 30d)', 33120]]));
   MockTableau.scenario('amounts', (M) => stages(M, [['SUM(Requested Amount)', 9.82e9], ['SUM(Approved Amount)', 6.41e9], ['SUM(Disbursed Amount)', 3.95e9]], (v) => Math.round(v / 1e6).toLocaleString('en-US') + ' Mn'));
   // a dimension on Detail: several rows, the stage is their total

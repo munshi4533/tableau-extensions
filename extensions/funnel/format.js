@@ -59,6 +59,8 @@
   function refresh () {
     $('bgColorField').hidden = cfg.background !== 'custom';
     $('colorField').hidden = cfg.colorMode !== 'single';
+    $('topColorField').hidden = cfg.topBar !== 'single';
+    $('boxColorField').hidden = cfg.boxFill !== 'custom';
     $('thresholds').classList.toggle('fx-dep', true); $('thresholds').classList.toggle('off', !cfg.prevColors);
   }
 
@@ -82,7 +84,7 @@
           <button type="button" class="mv" data-mv="-1" ${i === 0 ? 'disabled' : ''} title="Move up">▲</button>
           <button type="button" class="mv" data-mv="1" ${i === list.length - 1 ? 'disabled' : ''} title="Move down">▼</button>
           <span class="nm" title="${esc(s.key)}">${esc(c.label || s.name)}</span>
-          ${cfg.colorMode === 'single' ? '' : `<input type="color" data-f="color" value="${esc(color)}" title="Stage color">`}
+          ${cfg.colorMode === 'single' ? '' : `<input type="color" data-f="color" value="${esc(color)}" title="Color of this stage's bars and rings">`}
           <span class="tag">${esc(s.key)}</span>
         </div>
         <div class="row">

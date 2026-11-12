@@ -1,7 +1,7 @@
 {
   "name": "Funnel",
   "manifestName": "Funnel",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Conversion funnel from the measures on the Stages shelf (e.g. Started → Submitted → Approved → Disbursed): one box per stage with % of start and % of previous stage, the drop between stages, overall conversion and the weakest step.",
   "entry": "index.html",
   "icon": "icon.png",

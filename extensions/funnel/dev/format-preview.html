@@ -4,12 +4,12 @@
   <base href="../" />
   <!-- GENERATED preview (tools/build.py): sample data instead of Tableau -->
   <meta charset="utf-8" />
-  <meta name="ext-version" content="1.0.0" />
+  <meta name="ext-version" content="1.1.0" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Format Funnel (preview)</title>
-  <link rel="stylesheet" href="./format.css?v=1.0.0" />
+  <link rel="stylesheet" href="./format.css?v=1.1.0" />
   <script>window.tableau = window.parent.__mockDialogTableau;</script>
-  <script src="./format.js?v=1.0.0" defer></script>
+  <script src="./format.js?v=1.1.0" defer></script>
 </head>
 <body>
   <form id="form" class="fx" autocomplete="off">
@@ -25,7 +25,7 @@
 
     <main class="fx-body">
       <div class="fx-tab" data-pane="stages">
-        <div class="fx-help">One box per measure on the <b>Stages</b> shelf. Rename, recolor, hide or move a stage here (▲ ▼). % of start compares every stage with the first one shown; % of previous with the one before it.</div>
+        <div class="fx-help">One box per measure on the <b>Stages</b> shelf. Rename, color (its progress bars and rings), hide or move a stage here (▲ ▼). % of start compares every stage with the first one shown; % of previous with the one before it.</div>
         <div id="stages"></div>
       </div>
 
@@ -42,6 +42,7 @@
             <label class="fx-field">Label of % of start <input type="text" name="startLabel" placeholder="of start" /></label>
             <label class="fx-field">Label of % of previous <input type="text" name="prevLabel" placeholder="of previous" /></label>
           </div>
+          <label class="fx-check"><input type="checkbox" name="autoSize" /> Grow with the zone <small>(bigger numbers, rings and bars in a bigger zone)</small></label>
           <p class="fx-hint">Side by side moves the two bars under each other by itself when a box gets narrow.</p>
         </section>
         <section>
@@ -68,16 +69,21 @@
       <div class="fx-tab" data-pane="look" hidden>
         <section>
           <h2>Header</h2>
-          <label class="fx-check"><input type="checkbox" name="header" /> Overall conversion and weakest step</label>
+          <label class="fx-check"><input type="checkbox" name="showOverall" /> Overall conversion <small>(e.g. Application Started → Loan Disbursed)</small></label>
+          <label class="fx-check"><input type="checkbox" name="showWeakest" /> Weakest step</label>
           <div class="fx-grid"><label class="fx-field">Title <input type="text" name="title" placeholder="None" /></label></div>
         </section>
         <section>
           <h2>Colors</h2>
           <div class="fx-grid">
-            <label class="fx-field">Stage colors
-              <select name="colorMode"><option value="palette">A color per stage</option><option value="single">One color</option></select>
+            <label class="fx-field">Progress bars and rings
+              <select name="colorMode"><option value="palette">A color per stage (set in Stages)</option><option value="single">One color</option></select>
             </label>
             <label class="fx-color" id="colorField">Color <input type="color" name="color" /></label>
+            <label class="fx-field">Line at the top of each box
+              <select name="topBar"><option value="stage">Same as the stage color</option><option value="single">One color</option><option value="none">No line</option></select>
+            </label>
+            <label class="fx-color" id="topColorField">Color <input type="color" name="topColor" /></label>
           </div>
         </section>
         <section>
@@ -98,7 +104,8 @@
         <section>
           <h2>Boxes and background</h2>
           <div class="fx-grid">
-            <label class="fx-field">Box fill <select name="boxFill"><option value="white">White</option><option value="transparent">Transparent</option></select></label>
+            <label class="fx-field">Box fill <select name="boxFill"><option value="white">White</option><option value="transparent">Transparent</option><option value="custom">Custom color</option></select></label>
+            <label class="fx-color" id="boxColorField">Color <input type="color" name="boxColor" /></label>
             <label class="fx-field">Background <select name="background"><option value="transparent">Transparent</option><option value="white">White</option><option value="custom">Custom color</option></select></label>
             <label class="fx-color" id="bgColorField">Color <input type="color" name="bgColor" /></label>
           </div>

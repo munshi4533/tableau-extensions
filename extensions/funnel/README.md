@@ -9,7 +9,7 @@ Conversion funnel as a strip of boxes, e.g. **Started → Submitted → Approved
 3. **Format Extension** (or right-click):
    - **Stages:** rename (e.g. "Started"), recolor, hide, move up / down.
    - **Boxes:** progress style (two bars side by side, one under the other, or two rings), labels, red / amber / green thresholds for % of previous, values full or short, what the arrows show, layout (row / column / automatic).
-   - **Look:** header and title, colors (a color per stage or one color), text sizes and colors, box fill and border, background.
+   - **Look:** header (overall conversion, weakest step: each on/off) and title, progress colors (a color per stage or one color), the line at the top of each box (stage color, one color or none), text sizes and colors, box fill (white, transparent or a color) and border, background.
 
 ## How it works
 
@@ -19,4 +19,5 @@ Conversion funnel as a strip of boxes, e.g. **Started → Submitted → Approved
 - Same loading as the other extensions: "Loading…" on the first load, "Updating…" while other sheets filter it, and "No data for the current filters" when a filter leaves nothing.
 
 ## Version history
+- **1.1.0**: Boxes grow with the zone (bigger numbers, rings and bars, taller boxes; Boxes → Grow with the zone). The line at the top of the boxes has its own color setting (stage color, one color or none), separate from the progress bar / ring colors. Header: overall conversion and weakest step each have their own on/off. Box fill can be a custom color.
 - **1.0.0**: First version: conversion strip (Option D) with side-by-side / stacked / ring progress, drop or step % arrows, header with overall conversion and weakest step.
