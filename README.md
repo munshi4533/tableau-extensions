@@ -10,6 +10,7 @@ One GitHub repository, many Tableau **Viz Extensions** (Tableau 2024.2+ on Deskt
 | KPI Card | `extensions/kpi-card/` | `manifests/KpiCard.trex` |
 | Bar List | `extensions/bar-list/` | `manifests/BarList.trex` |
 | Funnel | `extensions/funnel/` | `manifests/Funnel.trex` |
+| Stage Flow | `extensions/stage-flow/` | `manifests/StageFlow.trex` |
 
 (The live list is on the landing page: `https://<github-user>.github.io/tableau-extensions/`.)
 

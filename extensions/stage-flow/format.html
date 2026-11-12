@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="ext-version" content="1.0.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Format Stage Flow</title>
+  <link rel="stylesheet" href="./format.css?v=1.0.0" />
+  <script src="../../shared/lib/tableau.extensions.1.latest.min.js?v=1.0.0"></script>
+  <script src="./format.js?v=1.0.0" defer></script>
+</head>
+<body>
+  <form id="form" class="fx" autocomplete="off">
+    <header class="fx-top">
+      <h1>Format Stage Flow</h1>
+      <p>Changes preview live on the sheet.</p>
+      <nav class="fx-tabs" id="tabs">
+        <button type="button" data-tab="stages" class="on">Stages</button>
+        <button type="button" data-tab="outcomes">Outcomes</button>
+        <button type="button" data-tab="look">Look</button>
+      </nav>
+    </header>
+    <main class="fx-body">
+      <div class="fx-tab" data-pane="stages">
+        <div class="fx-help">The stages in flow order. Rename (e.g. "Started" for RESPONSIBLE_LENDING), hide (its applications count at the stage before it) or move a stage with ▲ ▼. Without changes here, the order follows a rank on <b>Detail</b> (e.g. MIN(furthest_rank)).</div>
+        <div id="stages"></div>
+        <button type="button" id="resetOrder" class="fx-btn ghost add">Use the automatic order again</button>
+      </div>
+      <div class="fx-tab" data-pane="outcomes" hidden>
+        <section>
+          <h2>Made it</h2>
+          <div class="fx-grid"><label class="fx-field">Outcome that means success <select name="success" id="successSelect"></select></label></div>
+          <p class="fx-hint">After the last stage the flow splits into this outcome (e.g. Disbursed, kept) and the others (e.g. Cancelled after disbursement).</p>
+        </section>
+        <section>
+          <h2>Names and colors</h2>
+          <div id="outcomes"></div>
+        </section>
+      </div>
+      <div class="fx-tab" data-pane="look" hidden>
+        <section>
+          <h2>Layout</h2>
+          <div class="fx-grid">
+            <label class="fx-field">Direction <select name="layout"><option value="horizontal">Left to right</option><option value="vertical">Top to bottom</option></select></label>
+            <label class="fx-field">Band sizes <select name="sizes"><option value="true">True to the counts</option><option value="readable">Keep small stages readable</option></select></label>
+            <label class="fx-field">Numbers <select name="values"><option value="auto">Automatic (short when tight)</option><option value="full">Full (591,405)</option><option value="short">Short (591.4K)</option></select></label>
+            <label class="fx-color">Flow color <input type="color" name="mainColor" /></label>
+          </div>
+          <label class="fx-check"><input type="checkbox" name="showStepPct" /> % of previous stage on the band</label>
+          <label class="fx-check"><input type="checkbox" name="showLegend" /> Legend</label>
+        </section>
+        <section>
+          <h2>Header</h2>
+          <label class="fx-check"><input type="checkbox" name="showOverall" /> First → last stage conversion</label>
+          <label class="fx-check"><input type="checkbox" name="showKept" /> Last stage and kept <small>(when some cancel after it)</small></label>
+          <label class="fx-check"><input type="checkbox" name="showBiggest" /> Biggest drop</label>
+          <div class="fx-grid"><label class="fx-field">Title <input type="text" name="title" placeholder="None" /></label></div>
+        </section>
+        <section>
+          <h2>Text and background</h2>
+          <div class="fx-grid">
+            <label class="fx-field">Labels <select name="labelSize"><option>9</option><option>10</option><option>11</option><option>12</option><option>13</option><option>14</option></select></label>
+            <label class="fx-field">Numbers <select name="valueSize"><option>10</option><option>11</option><option>12</option><option>13</option><option>14</option><option>16</option></select></label>
+            <label class="fx-field">Title <select name="titleSize"><option>12</option><option>13</option><option>14</option><option>16</option><option>18</option></select></label>
+            <label class="fx-field">Background <select name="background"><option value="transparent">Transparent</option><option value="white">White</option><option value="custom">Custom color</option></select></label>
+            <label class="fx-color" id="bgColorField">Color <input type="color" name="bgColor" /></label>
+          </div>
+        </section>
+      </div>
+    </main>
+    <footer class="fx-foot">
+      <button type="button" id="reset" class="fx-btn ghost">Reset to defaults</button>
+      <span class="fx-spacer"></span>
+      <button type="button" id="cancel" class="fx-btn ghost">Cancel</button>
+      <button type="button" id="ok" class="fx-btn primary">OK</button>
+    </footer>
+  </form>
+</body>
+</html>

@@ -1,0 +1,54 @@
+/* Stage Flow – Tableau Viz Extension */
+:root { --surface: transparent; --ink-1: #0b0b0b; --ink-2: #52514e; --ink-3: #898781; --line: rgba(11,11,11,.10); --title-size: 14px; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; width: 100%; overflow: hidden; background: var(--surface); color: var(--ink-1);
+  font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; font-size: 12px; }
+.sf-root { position: fixed; inset: 0; display: flex; flex-direction: column; padding: 8px 10px; gap: 6px; }
+.sf-header { display: flex; align-items: flex-end; gap: 6px 28px; flex-wrap: wrap; flex: none; }
+.sf-header[hidden] { display: none; }
+.sf-title { font-size: var(--title-size); font-weight: 700; margin-right: auto; }
+.sf-title[hidden] { display: none; }
+.sf-summary { display: flex; gap: 6px 28px; flex-wrap: wrap; }
+.sf-summary > div { display: flex; flex-direction: column; font-size: 11px; color: var(--ink-3); line-height: 1.25; }
+.sf-summary b { font-size: 18px; color: var(--ink-1); font-variant-numeric: tabular-nums; }
+.sf-summary b.bad { color: #b02a2a; }
+.sf-summary small { font-size: 11px; color: var(--ink-2); }
+.sf-legend { display: flex; flex-wrap: wrap; gap: 3px 14px; font-size: 11px; color: var(--ink-2); flex: none; }
+.sf-legend[hidden] { display: none; }
+.sf-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.sf-chart { position: relative; flex: 1 1 auto; min-height: 0; }
+.sf-svg { display: block; overflow: visible; }
+.sf-svg text { font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+.sf-lab { fill: var(--ink-2); }
+.sf-val { fill: var(--ink-1); font-variant-numeric: tabular-nums; }
+.sf-step { fill: #1f5fae; font-variant-numeric: tabular-nums; }
+.sf-loss { fill: #b02a2a; font-variant-numeric: tabular-nums; }
+.sf-sub { fill: var(--ink-2); }
+[data-pick] { cursor: pointer; }
+.sf-leak:hover rect, .sf-node:hover { filter: brightness(.92); }
+/* a click: the selected marks keep their color, the rest fade */
+.has-sel [data-pick]:not(.picked) { opacity: .28; }
+.has-sel .sf-leak:not(.picked) rect.picked { opacity: 1; }
+.has-sel .sf-band { opacity: .08; }
+
+.sf-empty { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: var(--ink-2); padding: 20px; line-height: 1.5; }
+.sf-empty[hidden] { display: none; }
+.sf-tooltip { position: fixed; z-index: 20; pointer-events: none; background: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,.12); padding: 8px 10px; min-width: 220px; max-width: 340px; font-size: 11.5px; }
+.sf-tooltip[hidden] { display: none; }
+.sf-tt-head { font-weight: 700; margin-bottom: 4px; }
+.sf-tt-row { display: flex; justify-content: space-between; gap: 12px; color: var(--ink-2); padding: 1px 0; }
+.sf-tt-row b { color: var(--ink-1); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.sf-tt-row.hl { font-weight: 700; color: var(--ink-1); }
+.sf-tt-row.sub { padding-left: 12px; color: var(--ink-3); }
+.sf-tt-row.sub b { color: var(--ink-2); font-weight: 400; }
+.sf-tt-row i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
+.sf-tt-sec { border-top: 1px solid #edece7; margin-top: 5px; padding-top: 4px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3); }
+
+/* slow update: keep the chart, faded, with a small badge */
+body.is-updating #chart, body.is-updating #header, body.is-updating #legend { opacity: .5; transition: opacity .2s; }
+.ext-updating { position: fixed; top: 6px; right: 8px; z-index: 30; display: none; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; background: #fff; border: 1px solid rgba(11,11,11,.12); box-shadow: 0 2px 8px rgba(0,0,0,.08); font-size: 11px; color: #52514e; }
+body.is-updating .ext-updating { display: inline-flex; }
+.ext-updating i { width: 10px; height: 10px; border-radius: 50%; border: 2px solid #d9d8d2; border-top-color: #2a78d6; animation: ext-spin .8s linear infinite; }
+@keyframes ext-spin { to { transform: rotate(360deg); } }
+body.is-first-load::after { content: "Loading…"; position: fixed; inset: 0; display: grid; place-items: center; font: 12px -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color: #898781; background: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.035) 50%, transparent 100%) 0 0 / 200% 100%; animation: ext-shimmer 1.4s linear infinite; pointer-events: none; }
+@keyframes ext-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }

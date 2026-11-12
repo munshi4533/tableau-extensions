@@ -1,0 +1,36 @@
+{
+  "name": "Stage Flow",
+  "manifestName": "StageFlow",
+  "version": "1.0.0",
+  "description": "Where applications go: a flow through ordered stages (e.g. Responsible lending → … → Disbursed) where what leaves at each stage peels off, split by outcome (Rejected / Cancelled / In progress) with the reasons on hover; after the last stage, kept vs cancelled.",
+  "entry": "index.html",
+  "icon": "icon.png",
+  "formatDialog": true,
+  "previewPages": ["index.html", "format.html"],
+  "encodings": [
+    {
+      "id": "stage", "name": "Stage",
+      "roles": ["discrete-dimension"],
+      "maxCount": 1, "icon": "letter-x",
+      "tooltip": "The furthest stage each application reached (one row per application in your data). Order: Format Extension, or a rank field (e.g. MIN(furthest_rank)) on Detail."
+    },
+    {
+      "id": "outcome", "name": "Outcome",
+      "roles": ["discrete-dimension"],
+      "maxCount": 1, "icon": "color",
+      "tooltip": "How it ended, e.g. Disbursed / Rejected / Cancelled / In progress / Cancelled after disbursement."
+    },
+    {
+      "id": "count", "name": "Count",
+      "dataType": "numeric", "roles": ["continuous-measure"],
+      "maxCount": 1, "icon": "metric",
+      "tooltip": "How many, e.g. COUNTD(id)."
+    },
+    {
+      "id": "reason", "name": "Reason",
+      "roles": ["discrete-dimension"],
+      "maxCount": 2,
+      "tooltip": "Optional. Reason and sub reason (e.g. reject_reason, reject_sub_reason): shown on hover over a leak."
+    }
+  ]
+}
